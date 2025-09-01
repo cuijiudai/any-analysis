@@ -16,9 +16,11 @@ export interface FetchConfig {
   headers: Record<string, string>;
   queryParams?: Record<string, string>;
   enablePagination: boolean;
+  paginationType?: 'page' | 'offset'; // 分页方式：页码方式或索引方式
   pageField?: string; // 分页字段名，如 'page', 'pageNum' 等
   totalField?: string; // 总数字段名，如 'total', 'totalCount' 等，用于显示进度
   pageSize?: number;
+  stepSize?: number; // 索引方式下的步长
   dataPath?: string; // 数据路径，如 'data.list' 或 'result.items'
 }
 

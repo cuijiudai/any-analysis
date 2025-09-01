@@ -58,6 +58,7 @@ const FetchResultTable: React.FC<FetchResultTableProps> = ({
       dataIndex: key,
       key,
       width: 150,
+      sorter: false, // 禁用排序
       ellipsis: {
         showTitle: false,
       },
@@ -101,8 +102,8 @@ const FetchResultTable: React.FC<FetchResultTableProps> = ({
         pagination={{
           pageSize: 20,
           showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: (total) => `共 ${total} 条`,
+          showQuickJumper: false, // 禁用快速跳转（搜索）
+          showTotal: undefined, // 禁用记录数显示
           pageSizeOptions: ['10', '20', '50', '100'],
         }}
         scroll={{ 
@@ -121,9 +122,6 @@ const FetchResultTable: React.FC<FetchResultTableProps> = ({
         <Space>
           <DatabaseOutlined />
           {title}
-          {data && data.length > 0 && (
-            <Tag color="blue">共 {data.length} 条</Tag>
-          )}
         </Space>
       }
       extra={

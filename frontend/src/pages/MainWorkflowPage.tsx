@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Row, Col, Layout, Button, Space, message, Card } from 'antd';
 import { UnorderedListOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
-import FetchConfigForm from '../components/data-fetch/FetchConfigForm';
-import DataPreview from '../components/data-fetch/DataPreview';
+import FetchConfigWrapper from '../components/data-fetch/FetchConfigWrapper';
 import FetchResultTable from '../components/data-fetch/FetchResultTable';
 import WorkflowSteps from '../components/common/WorkflowSteps';
 import { FetchConfig, SmokeTestResponse } from '../types';
@@ -136,6 +135,13 @@ const MainWorkflowPage: React.FC = () => {
         throw new Error(configResponse.data.error || '保存配置失败');
       }
       
+      // 立即显示开始拉取的提示和进度
+      message.info('开始拉取数据...');
+      setFetchStatus({
+        status: 'running',
+        progress: 0
+      });
+      
       // 开始拉取
       const executeResponse = await api.post('/data-fetch/execute', {
         sessionId: targetSessionId
@@ -155,10 +161,18 @@ const MainWorkflowPage: React.FC = () => {
           await loadFetchedData(targetSessionId);
         }
       } else {
+        setFetchStatus({
+          status: 'failed',
+          error: executeResponse.data.message || '开始拉取失败'
+        });
         throw new Error(executeResponse.data.message || '开始拉取失败');
       }
     } catch (error: any) {
       message.error(`开始拉取失败: ${error.message}`);
+      setFetchStatus({
+        status: 'failed',
+        error: error.message
+      });
     } finally {
       setLoading(false);
     }
@@ -221,46 +235,42 @@ const MainWorkflowPage: React.FC = () => {
       {/* 步骤条 */}
       <WorkflowSteps current={currentStep} completedSteps={[]} />
 
-      <Row {...layoutProps} style={{ height: '100%' }}>
-        <Col xs={24} lg={10}>
-          <FetchConfigForm
-            initialValues={currentConfig || undefined}
-            onConfigChange={handleConfigChange}
-            onSmokeTestComplete={handleSmokeTestComplete}
-            onSaveConfig={handleSaveConfig}
-            onStartFetch={handleStartFetch}
-            loading={loading}
-          />
-        </Col>
-        <Col xs={24} lg={14}>
-          {currentStep < 2 ? (
-            <DataPreview testResult={smokeTestResult || undefined} />
-          ) : (
-            <div>
-              {fetchStatus && (
-                <Card size="small" style={{ marginBottom: 16 }}>
-                  <Space>
-                    <span>拉取状态: <strong style={{ color: '#52c41a' }}>完成</strong></span>
-                    <span>总记录数: <strong>{fetchStatus.totalRecords}</strong></span>
-                    {fetchStatus.pagesProcessed && (
-                      <span>处理页数: <strong>{fetchStatus.pagesProcessed}</strong></span>
-                    )}
-                  </Space>
-                </Card>
-              )}
-              
-              <FetchResultTable
-                data={fetchedData}
-                title={`拉取结果 (共${fetchedData.length}条)`}
-                showActions={true}
-                mode="formal"
-                sessionId={currentSessionId || undefined}
-                onFieldAnnotation={(sessionId) => navigate(`/workflow/${sessionId}?step=annotation`)}
-              />
-            </div>
+      {currentStep < 2 ? (
+        <FetchConfigWrapper
+          initialValues={currentConfig || undefined}
+          onConfigChange={handleConfigChange}
+          onSmokeTestComplete={handleSmokeTestComplete}
+          onSaveConfig={handleSaveConfig}
+          onStartFetch={handleStartFetch}
+          loading={loading}
+          fetchStatus={fetchStatus}
+          smokeTestResult={smokeTestResult}
+          sessionId={currentSessionId || undefined}
+        />
+      ) : (
+        <div>
+          {fetchStatus && (
+            <Card size="small" style={{ marginBottom: 16 }}>
+              <Space>
+                <span>拉取状态: <strong style={{ color: '#52c41a' }}>完成</strong></span>
+                <span>总记录数: <strong>{fetchStatus.totalRecords}</strong></span>
+                {fetchStatus.pagesProcessed && (
+                  <span>处理页数: <strong>{fetchStatus.pagesProcessed}</strong></span>
+                )}
+              </Space>
+            </Card>
           )}
-        </Col>
-      </Row>
+          
+          <FetchResultTable
+            data={fetchedData}
+            title={`拉取结果 (共${fetchedData.length}条)`}
+            showActions={true}
+            mode="formal"
+            sessionId={currentSessionId || undefined}
+            onFieldAnnotation={(sessionId) => navigate(`/workflow/${sessionId}?step=annotation`)}
+          />
+        </div>
+      )}
     </Content>
   );
 };

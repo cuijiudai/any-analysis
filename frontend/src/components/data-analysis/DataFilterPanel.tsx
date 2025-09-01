@@ -105,7 +105,7 @@ export const DataFilterPanel: React.FC<DataFilterPanelProps> = ({
       "text": FieldType.STRING,
       "varchar": FieldType.STRING,
       "int": FieldType.INTEGER,
-      "double": FieldType.FLOAT,
+      "double": FieldType.DECIMAL,
       "timestamp": FieldType.DATETIME,
       "bool": FieldType.BOOLEAN,
     };
@@ -128,7 +128,7 @@ export const DataFilterPanel: React.FC<DataFilterPanelProps> = ({
 
       // 检测是否为数字类型
       if (stats.min !== undefined && stats.max !== undefined) {
-        return FieldType.NUMBER;
+        return FieldType.DECIMAL;
       }
     }
 
@@ -153,7 +153,7 @@ export const DataFilterPanel: React.FC<DataFilterPanelProps> = ({
       fieldName.includes("age") ||
       fieldName.includes("price")
     ) {
-      return FieldType.NUMBER;
+      return FieldType.DECIMAL;
     }
 
     // 布尔相关

@@ -40,6 +40,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({
       dataIndex: key,
       key,
       width: 150,
+      sorter: false, // 禁用排序
       ellipsis: {
         showTitle: false,
       },
@@ -83,8 +84,8 @@ const DataPreview: React.FC<DataPreviewProps> = ({
         pagination={{
           pageSize: 10,
           showSizeChanger: false,
-          showQuickJumper: true,
-          showTotal: (total) => `共 ${total} 条`,
+          showQuickJumper: false, // 禁用快速跳转（搜索）
+          showTotal: undefined, // 禁用记录数显示
         }}
         scroll={{ 
           x: columns.length * 150, // 根据字段数量动态计算宽度
@@ -143,11 +144,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({
 
   return (
     <Card 
-      title={
-        testResult?.success && testResult.data?.length > 0 
-          ? `测试拉取结果 (共${testResult.data.length}条)`
-          : "数据预览"
-      }
+      title="数据预览"
       size="small"
       extra={
         testResult?.success && (

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Switch, Typography, Tooltip, Row, Col, InputNumber, Form, Select, Alert } from 'antd';
+import { Switch, Typography, Tooltip, Row, Col, InputNumber, Form, Select, Space } from 'antd';
 import { InfoCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 
 const { Text } = Typography;
@@ -15,6 +15,10 @@ interface FetchModeSelectorProps {
   onTotalFieldChange?: (totalField: string) => void;
   totalField?: string;
   suggestedTotalFields?: string[]; // 建议的总数字段
+  onPaginationTypeChange?: (paginationType: string) => void;
+  paginationType?: string;
+  onStepSizeChange?: (stepSize: number) => void;
+  stepSize?: number;
 }
 
 const FetchModeSelector: React.FC<FetchModeSelectorProps> = ({
@@ -27,6 +31,10 @@ const FetchModeSelector: React.FC<FetchModeSelectorProps> = ({
   onTotalFieldChange,
   totalField,
   suggestedTotalFields = [],
+  onPaginationTypeChange,
+  paginationType = 'page',
+  onStepSizeChange,
+  stepSize = 20,
 }) => {
   const [enablePagination, setEnablePagination] = useState(value);
 
@@ -73,6 +81,16 @@ const FetchModeSelector: React.FC<FetchModeSelectorProps> = ({
     onTotalFieldChange?.(field);
   };
 
+  const handlePaginationTypeChange = (type: string) => {
+    onPaginationTypeChange?.(type);
+  };
+
+  const handleStepSizeChange = (size: number | null) => {
+    if (size !== null) {
+      onStepSizeChange?.(size);
+    }
+  };
+
   return (
     <div>
       <Row align="middle" gutter={16}>
@@ -84,30 +102,70 @@ const FetchModeSelector: React.FC<FetchModeSelectorProps> = ({
           />
         </Col>
         <Col>
-          <Text strong>拉取全部</Text>
-          <Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>
-            (开启后将自动拉取所有分页数据)
-          </Text>
+          <Space>
+            <Text strong>拉取全部</Text>
+            <Tooltip title="系统将自动从第1页开始拉取所有可用数据，直到API返回空数据或错误。请选择API中用于分页的字段名和总数字段名（可选），系统会显示拉取进度。">
+              <InfoCircleOutlined style={{ color: '#999', fontSize: 14 }} />
+            </Tooltip>
+          </Space>
         </Col>
       </Row>
 
       {enablePagination && (
         <div style={{ padding: 16, backgroundColor: '#f6ffed', borderRadius: 6, marginTop: 16 }}>
-          <Alert
-            type="info"
-            message="拉取全部模式"
-            description="系统将自动从第1页开始拉取所有可用数据，直到API返回空数据或错误。请选择API中用于分页的字段名和总数字段名（可选），系统会显示拉取进度。"
-            style={{ marginBottom: 16 }}
-            showIcon
-          />
-
           <Row gutter={16}>
-            <Col span={12}>
+            <Col span={6}>
+              <Form.Item
+                label={
+                  <span>
+                    分页方式
+                    <Tooltip title="选择分页方式：页码方式传递页码和每页数量，索引方式传递开始索引和每页数量">
+                      <InfoCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                    </Tooltip>
+                  </span>
+                }
+                name="paginationType"
+              >
+                <Select
+                  value={paginationType}
+                  onChange={handlePaginationTypeChange}
+                  disabled={disabled}
+                >
+                  <Option value="page">页码方式</Option>
+                  <Option value="offset">索引方式</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            {paginationType === 'offset' && (
+              <Col span={6}>
+                <Form.Item
+                  label={
+                    <span>
+                      步长
+                      <Tooltip title="索引方式下每次递增的数量，默认为20">
+                        <InfoCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                      </Tooltip>
+                    </span>
+                  }
+                  name="stepSize"
+                >
+                  <InputNumber
+                    min={1}
+                    max={1000}
+                    value={stepSize}
+                    onChange={handleStepSizeChange}
+                    disabled={disabled}
+                    placeholder="20"
+                  />
+                </Form.Item>
+              </Col>
+            )}
+            <Col span={8}>
               <Form.Item
                 label={
                   <span>
                     分页字段
-                    <Tooltip title="选择API中用于表示当前页码的字段名，如 'page', 'pageNum' 等">
+                    <Tooltip title="选择API中用于表示当前页码或索引的字段名，如 'page', 'offset' 等">
                       <InfoCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
                     </Tooltip>
                   </span>
@@ -157,7 +215,7 @@ const FetchModeSelector: React.FC<FetchModeSelectorProps> = ({
                 </Select>
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col span={paginationType === 'offset' ? 6 : 9}>
               <Form.Item
                 label={
                   <span>

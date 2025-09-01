@@ -1,14 +1,14 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  Table, 
-  Card, 
-  Pagination, 
-  Spin, 
-  Alert, 
-  Input, 
-  Button, 
-  Space, 
-  Typography, 
+import React, { useState, useEffect, useCallback } from "react";
+import {
+  Table,
+  Card,
+  Pagination,
+  Spin,
+  Alert,
+  Input,
+  Button,
+  Space,
+  Typography,
   Select,
   Tooltip,
   Tag,
@@ -18,18 +18,18 @@ import {
   message,
   Row,
   Col,
-  Statistic
-} from 'antd';
-import { 
-  SearchOutlined, 
-  ReloadOutlined, 
+  Statistic,
+} from "antd";
+import {
+  SearchOutlined,
+  ReloadOutlined,
   DownloadOutlined,
   FilterOutlined,
   EyeOutlined,
   ColumnHeightOutlined,
-  InfoCircleOutlined
-} from '@ant-design/icons';
-import api from '../../services/api';
+  InfoCircleOutlined,
+} from "@ant-design/icons";
+import api from "../../services/api";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -53,7 +53,7 @@ interface PaginationInfo {
 
 interface ColumnFilter {
   field: string;
-  operator: 'contains' | 'equals' | 'not_equals' | 'greater_than' | 'less_than';
+  operator: "contains" | "equals" | "not_equals" | "greater_than" | "less_than";
   value: string;
 }
 
@@ -64,10 +64,10 @@ interface DataStats {
   created: string;
 }
 
-const FetchedDataPreview: React.FC<FetchedDataPreviewProps> = ({ 
-  sessionId, 
-  visible = true, 
-  height = 400 
+const FetchedDataPreview: React.FC<FetchedDataPreviewProps> = ({
+  sessionId,
+  visible = true,
+  height = 400,
 }) => {
   const [data, setData] = useState<DataRecord[]>([]);
   const [loading, setLoading] = useState(false);
@@ -77,11 +77,13 @@ const FetchedDataPreview: React.FC<FetchedDataPreviewProps> = ({
     pageSize: 20,
     total: 0,
   });
-  const [searchText, setSearchText] = useState('');
+  const [searchText, setSearchText] = useState("");
   const [columns, setColumns] = useState<any[]>([]);
   const [filters, setFilters] = useState<ColumnFilter[]>([]);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
-  const [tableSize, setTableSize] = useState<'small' | 'middle' | 'large'>('small');
+  const [tableSize, setTableSize] = useState<"small" | "middle" | "large">(
+    "small"
+  );
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<DataRecord | null>(null);
   const [dataStats, setDataStats] = useState<DataStats | null>(null);
@@ -96,61 +98,67 @@ const FetchedDataPreview: React.FC<FetchedDataPreviewProps> = ({
         setDataStats(response.data.data);
       }
     } catch (error) {
-      console.error('Failed to load data stats:', error);
+      console.error("Failed to load data stats:", error);
     }
   }, [sessionId]);
 
   // 加载数据
-  const loadData = useCallback(async (
-    page: number = 1, 
-    pageSize: number = 20, 
-    search?: string,
-    columnFilters?: ColumnFilter[]
-  ) => {
-    if (!sessionId) return;
+  const loadData = useCallback(
+    async (
+      page: number = 1,
+      pageSize: number = 20,
+      search?: string,
+      columnFilters?: ColumnFilter[]
+    ) => {
+      if (!sessionId) return;
 
-    setLoading(true);
-    setError(null);
+      setLoading(true);
+      setError(null);
 
-    try {
-      const params: any = {
-        page,
-        pageSize,
-      };
+      try {
+        const params: any = {
+          page,
+          pageSize,
+        };
 
-      if (search) {
-        params.search = search;
-      }
-
-      if (columnFilters && columnFilters.length > 0) {
-        params.filters = JSON.stringify(columnFilters);
-      }
-
-      const response = await api.get(`/data-fetch/data/${sessionId}`, { params });
-
-      if (response.data.success) {
-        const { data: records, pagination: paginationInfo } = response.data.data;
-        
-        setData(records);
-        setPagination(paginationInfo);
-        
-        // 动态生成表格列
-        if (records.length > 0) {
-          generateColumns(records[0]);
+        if (search) {
+          params.search = search;
         }
-      } else {
-        setError(response.data.error || '加载数据失败');
+
+        if (columnFilters && columnFilters.length > 0) {
+          params.filters = JSON.stringify(columnFilters);
+        }
+
+        const response = await api.get(`/data-fetch/data/${sessionId}`, {
+          params,
+        });
+
+        if (response.data.success) {
+          const { data: records, pagination: paginationInfo } =
+            response.data.data;
+
+          setData(records);
+          setPagination(paginationInfo);
+
+          // 动态生成表格列
+          if (records.length > 0) {
+            generateColumns(records[0]);
+          }
+        } else {
+          setError(response.data.error || "加载数据失败");
+        }
+      } catch (err: any) {
+        setError(err.response?.data?.error || err.message || "网络错误");
+      } finally {
+        setLoading(false);
       }
-    } catch (err: any) {
-      setError(err.response?.data?.error || err.message || '网络错误');
-    } finally {
-      setLoading(false);
-    }
-  }, [sessionId]);
+    },
+    [sessionId]
+  );
 
   // 动态生成表格列
   const generateColumns = (sampleRecord: DataRecord) => {
-    const systemFields = ['id', 'created_at', 'updated_at'];
+    const systemFields = ["id", "created_at", "updated_at"];
     const cols = Object.keys(sampleRecord)
       .filter(key => !systemFields.includes(key))
       .map(key => ({
@@ -158,8 +166,8 @@ const FetchedDataPreview: React.FC<FetchedDataPreviewProps> = ({
           <Space>
             <span>{key}</span>
             <Tooltip title="查看字段详情">
-              <InfoCircleOutlined 
-                style={{ cursor: 'pointer', color: '#1890ff', fontSize: 12 }}
+              <InfoCircleOutlined
+                style={{ cursor: "pointer", color: "#1890ff", fontSize: 12 }}
                 onClick={() => showColumnDetails(key, sampleRecord[key])}
               />
             </Tooltip>
@@ -170,51 +178,26 @@ const FetchedDataPreview: React.FC<FetchedDataPreviewProps> = ({
         ellipsis: {
           showTitle: false,
         },
-        sorter: true,
+        sorter: false, // 禁用排序
         width: 150,
-        filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }: any) => (
-          <div style={{ padding: 8 }}>
-            <Input
-              placeholder={`搜索 ${key}`}
-              value={selectedKeys[0]}
-              onChange={e => setSelectedKeys(e.target.value ? [e.target.value] : [])}
-              onPressEnter={() => confirm()}
-              style={{ marginBottom: 8, display: 'block' }}
-            />
-            <Space>
-              <Button
-                type="primary"
-                onClick={() => confirm()}
-                icon={<SearchOutlined />}
-                size="small"
-                style={{ width: 90 }}
-              >
-                搜索
-              </Button>
-              <Button onClick={() => clearFilters?.()} size="small" style={{ width: 90 }}>
-                重置
-              </Button>
-            </Space>
-          </div>
-        ),
-        filterIcon: (filtered: boolean) => (
-          <SearchOutlined style={{ color: filtered ? '#1890ff' : undefined }} />
-        ),
+        // 移除搜索功能
         render: (value: any, record: DataRecord) => {
           if (value === null || value === undefined) {
             return <Text type="secondary">-</Text>;
           }
-          
-          if (typeof value === 'boolean') {
-            return <Tag color={value ? 'green' : 'red'}>{value ? '是' : '否'}</Tag>;
+
+          if (typeof value === "boolean") {
+            return (
+              <Tag color={value ? "green" : "red"}>{value ? "是" : "否"}</Tag>
+            );
           }
-          
-          if (typeof value === 'object') {
+
+          if (typeof value === "object") {
             return (
               <Tooltip title={JSON.stringify(value, null, 2)}>
-                <Text 
-                  code 
-                  style={{ cursor: 'pointer' }}
+                <Text
+                  code
+                  style={{ cursor: "pointer" }}
                   onClick={() => showRecordDetail(record)}
                 >
                   {JSON.stringify(value).substring(0, 30)}...
@@ -222,28 +205,30 @@ const FetchedDataPreview: React.FC<FetchedDataPreviewProps> = ({
               </Tooltip>
             );
           }
-          
+
           const strValue = String(value);
-          
+
           // 检测特殊类型
           if (strValue.match(/^https?:\/\//)) {
             return (
               <a href={strValue} target="_blank" rel="noopener noreferrer">
-                {strValue.length > 30 ? `${strValue.substring(0, 30)}...` : strValue}
+                {strValue.length > 30
+                  ? `${strValue.substring(0, 30)}...`
+                  : strValue}
               </a>
             );
           }
-          
+
           if (strValue.match(/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/)) {
             return <Text copyable>{strValue}</Text>;
           }
-          
+
           if (strValue.length > 50) {
             return (
               <Tooltip title={strValue}>
-                <Text 
-                  ellipsis 
-                  style={{ cursor: 'pointer', maxWidth: 120 }}
+                <Text
+                  ellipsis
+                  style={{ cursor: "pointer", maxWidth: 120 }}
                   onClick={() => showRecordDetail(record)}
                 >
                   {strValue}
@@ -251,10 +236,10 @@ const FetchedDataPreview: React.FC<FetchedDataPreviewProps> = ({
               </Tooltip>
             );
           }
-          
+
           return (
-            <span 
-              style={{ cursor: 'pointer' }}
+            <span
+              style={{ cursor: "pointer" }}
               onClick={() => showRecordDetail(record)}
             >
               {strValue}
@@ -265,9 +250,9 @@ const FetchedDataPreview: React.FC<FetchedDataPreviewProps> = ({
 
     // 添加操作列
     cols.push({
-      title: '操作',
-      key: 'action',
-      fixed: 'right',
+      title: "操作",
+      key: "action",
+      fixed: "right",
       width: 80,
       render: (_: any, record: DataRecord) => (
         <Button
@@ -290,15 +275,28 @@ const FetchedDataPreview: React.FC<FetchedDataPreviewProps> = ({
       title: `字段详情: ${columnName}`,
       content: (
         <div>
-          <p><strong>字段名:</strong> {columnName}</p>
-          <p><strong>数据类型:</strong> {typeof sampleValue}</p>
-          <p><strong>示例值:</strong></p>
-          <div style={{ background: '#f5f5f5', padding: 8, borderRadius: 4, maxHeight: 200, overflow: 'auto' }}>
-            <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
-              {typeof sampleValue === 'object' 
+          <p>
+            <strong>字段名:</strong> {columnName}
+          </p>
+          <p>
+            <strong>数据类型:</strong> {typeof sampleValue}
+          </p>
+          <p>
+            <strong>示例值:</strong>
+          </p>
+          <div
+            style={{
+              background: "#f5f5f5",
+              padding: 8,
+              borderRadius: 4,
+              maxHeight: 200,
+              overflow: "auto",
+            }}
+          >
+            <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>
+              {typeof sampleValue === "object"
                 ? JSON.stringify(sampleValue, null, 2)
-                : String(sampleValue)
-              }
+                : String(sampleValue)}
             </pre>
           </div>
         </div>
@@ -333,29 +331,31 @@ const FetchedDataPreview: React.FC<FetchedDataPreviewProps> = ({
   // 导出数据
   const handleExport = async () => {
     try {
-      message.loading('正在导出数据...', 0);
-      
+      message.loading("正在导出数据...", 0);
+
       const response = await api.get(`/data-fetch/export/${sessionId}`, {
         params: {
-          format: 'csv',
+          format: "csv",
           filters: filters.length > 0 ? JSON.stringify(filters) : undefined,
         },
-        responseType: 'blob',
+        responseType: "blob",
       });
 
-      const blob = new Blob([response.data], { type: 'text/csv' });
+      const blob = new Blob([response.data], { type: "text/csv" });
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
-      link.download = `data_${sessionId}_${new Date().toISOString().split('T')[0]}.csv`;
+      link.download = `data_${sessionId}_${
+        new Date().toISOString().split("T")[0]
+      }.csv`;
       link.click();
       window.URL.revokeObjectURL(url);
-      
+
       message.destroy();
-      message.success('数据导出成功');
+      message.success("数据导出成功");
     } catch (error) {
       message.destroy();
-      message.error('数据导出失败');
+      message.error("数据导出失败");
     }
   };
 
@@ -394,17 +394,26 @@ const FetchedDataPreview: React.FC<FetchedDataPreviewProps> = ({
         {/* 数据统计 */}
         {dataStats && (
           <Row gutter={16}>
-            <Col span={6}>
-              <Statistic title="总记录数" value={dataStats.totalRecords} />
+            <Col span={8}>
+              <Statistic
+                title="总记录数"
+                value={dataStats.totalRecords}
+                suffix="条"
+              />
             </Col>
-            <Col span={6}>
-              <Statistic title="字段数" value={dataStats.totalFields} />
+            <Col span={8}>
+              <Statistic
+                title="字段数"
+                value={dataStats.totalFields}
+                suffix="个"
+              />
             </Col>
-            <Col span={6}>
-              <Statistic title="表大小" value={dataStats.tableSize} />
-            </Col>
-            <Col span={6}>
-              <Statistic title="创建时间" value={dataStats.created} />
+
+            <Col span={8}>
+              <Statistic
+                title="创建时间"
+                value={new Date(dataStats.created).toLocaleString()}
+              />
             </Col>
           </Row>
         )}
@@ -412,14 +421,15 @@ const FetchedDataPreview: React.FC<FetchedDataPreviewProps> = ({
 
       <Card
         title={
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
             <Title level={5} style={{ margin: 0 }}>
               拉取数据预览
-              {pagination.total > 0 && (
-                <Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>
-                  (共 {pagination.total} 条记录)
-                </Text>
-              )}
             </Title>
             <Space>
               <Search
@@ -429,7 +439,7 @@ const FetchedDataPreview: React.FC<FetchedDataPreviewProps> = ({
                 style={{ width: 200 }}
                 enterButton={<SearchOutlined />}
               />
-              <Dropdown overlay={sizeMenu} trigger={['click']}>
+              <Dropdown overlay={sizeMenu} trigger={["click"]}>
                 <Button icon={<ColumnHeightOutlined />} />
               </Dropdown>
               <Button
@@ -490,25 +500,23 @@ const FetchedDataPreview: React.FC<FetchedDataPreviewProps> = ({
             rowKey="id"
             rowSelection={rowSelection}
             locale={{
-              emptyText: loading ? '加载中...' : '暂无数据',
+              emptyText: loading ? "加载中..." : "暂无数据",
             }}
           />
         </Spin>
 
         {pagination.total > 0 && (
-          <div style={{ marginTop: 16, textAlign: 'right' }}>
+          <div style={{ marginTop: 16, textAlign: "right" }}>
             <Pagination
               current={pagination.page}
               pageSize={pagination.pageSize}
               total={pagination.total}
               showSizeChanger
               showQuickJumper
-              showTotal={(total, range) =>
-                `第 ${range[0]}-${range[1]} 条，共 ${total} 条记录`
-              }
+              showTotal={undefined} // 禁用记录数显示
               onChange={handlePaginationChange}
               onShowSizeChange={handlePaginationChange}
-              pageSizeOptions={['10', '20', '50', '100']}
+              pageSizeOptions={["10", "20", "50", "100"]}
             />
           </div>
         )}
@@ -528,13 +536,20 @@ const FetchedDataPreview: React.FC<FetchedDataPreviewProps> = ({
         style={{ top: 20 }}
       >
         {selectedRecord && (
-          <div style={{ maxHeight: 600, overflow: 'auto' }}>
+          <div style={{ maxHeight: 600, overflow: "auto" }}>
             {Object.entries(selectedRecord).map(([key, value]) => (
               <div key={key} style={{ marginBottom: 12 }}>
                 <Text strong>{key}: </Text>
-                <div style={{ marginTop: 4, padding: 8, background: '#f5f5f5', borderRadius: 4 }}>
-                  {typeof value === 'object' ? (
-                    <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
+                <div
+                  style={{
+                    marginTop: 4,
+                    padding: 8,
+                    background: "#f5f5f5",
+                    borderRadius: 4,
+                  }}
+                >
+                  {typeof value === "object" ? (
+                    <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>
                       {JSON.stringify(value, null, 2)}
                     </pre>
                   ) : (

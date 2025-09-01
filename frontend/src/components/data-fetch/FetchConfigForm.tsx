@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Form,
   Input,
@@ -12,18 +12,18 @@ import {
   message,
   Alert,
   Tooltip,
-} from 'antd';
-import { 
-  ImportOutlined, 
-  PlusOutlined, 
-  DeleteOutlined, 
+} from "antd";
+import {
+  ImportOutlined,
+  PlusOutlined,
+  DeleteOutlined,
   InfoCircleOutlined,
   CheckCircleOutlined,
-} from '@ant-design/icons';
-import SmokeTestButton from './SmokeTestButton';
-import CurlParserModal from './CurlParserModal';
-import FetchModeSelector from './FetchModeSelector';
-import { FetchConfig, SmokeTestResponse } from '../../types';
+} from "@ant-design/icons";
+import SmokeTestButton from "./SmokeTestButton";
+import CurlParserModal from "./CurlParserModal";
+import FetchModeSelector from "./FetchModeSelector";
+import { FetchConfig, SmokeTestResponse } from "../../types";
 
 const { Title, Text } = Typography;
 
@@ -49,10 +49,14 @@ const FetchConfigForm: React.FC<FetchConfigFormProps> = ({
   const [form] = Form.useForm();
   const [curlModalVisible, setCurlModalVisible] = useState(false);
   const [enablePagination, setEnablePagination] = useState<boolean>(false);
-  const [pageField, setPageField] = useState<string>('');
-  const [totalField, setTotalField] = useState<string>('');
+  const [pageField, setPageField] = useState<string>("");
+  const [totalField, setTotalField] = useState<string>("");
+  const [paginationType, setPaginationType] = useState<string>('page');
+  const [stepSize, setStepSize] = useState<number>(20);
   const [suggestedPageFields, setSuggestedPageFields] = useState<string[]>([]);
-  const [suggestedTotalFields, setSuggestedTotalFields] = useState<string[]>([]);
+  const [suggestedTotalFields, setSuggestedTotalFields] = useState<string[]>(
+    []
+  );
   const [formValid, setFormValid] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
@@ -65,19 +69,19 @@ const FetchConfigForm: React.FC<FetchConfigFormProps> = ({
 
       // 验证API URL
       if (!values.apiUrl) {
-        errors.push('API URL 是必填项');
+        errors.push("API URL 是必填项");
       } else {
         try {
           new URL(values.apiUrl);
         } catch {
-          errors.push('请输入有效的 API URL');
+          errors.push("请输入有效的 API URL");
         }
       }
 
       // 验证分页参数
       if (values.enablePagination) {
         if (!values.pageField) {
-          errors.push('启用拉取全部时必须选择分页字段');
+          errors.push("启用拉取全部时必须选择分页字段");
         }
         // 拉取全部模式不需要验证pageSize，系统会自动处理
       }
@@ -137,14 +141,19 @@ const FetchConfigForm: React.FC<FetchConfigFormProps> = ({
     if (changedValues.totalField) {
       setTotalField(changedValues.totalField);
     }
+    if (changedValues.paginationType) {
+      setPaginationType(changedValues.paginationType);
+    }
 
     const config: FetchConfig = {
-      apiUrl: allValues.apiUrl || '',
+      apiUrl: allValues.apiUrl || "",
       headers: {},
       enablePagination: allValues.enablePagination || false,
+      paginationType: allValues.paginationType || paginationType,
       pageField: allValues.pageField,
       totalField: allValues.totalField,
       pageSize: allValues.pageSize || 20,
+      stepSize: allValues.stepSize || stepSize,
       name: allValues.name,
       dataPath: allValues.dataPath,
     };
@@ -153,7 +162,7 @@ const FetchConfigForm: React.FC<FetchConfigFormProps> = ({
     if (allValues.headers && Array.isArray(allValues.headers)) {
       allValues.headers.forEach((header: any) => {
         if (header?.key) {
-          config.headers[header.key] = header.value || '';
+          config.headers[header.key] = header.value || "";
         }
       });
     }
@@ -163,14 +172,14 @@ const FetchConfigForm: React.FC<FetchConfigFormProps> = ({
     if (allValues.queryParams && Array.isArray(allValues.queryParams)) {
       allValues.queryParams.forEach((param: any) => {
         if (param?.key) {
-          queryParams[param.key] = param.value || '';
+          queryParams[param.key] = param.value || "";
         }
       });
     }
     config.queryParams = queryParams;
 
     onConfigChange?.(config);
-    
+
     // 延迟验证以避免频繁验证
     setTimeout(validateForm, 300);
   };
@@ -181,21 +190,27 @@ const FetchConfigForm: React.FC<FetchConfigFormProps> = ({
   useEffect(() => {
     if (initialValues && !initialized) {
       // 处理初始值中的请求头
-      const headersArray = initialValues.headers 
-        ? Object.entries(initialValues.headers).map(([key, value]) => ({ key, value }))
-        : [{ key: '', value: '' }];
-      
+      const headersArray = initialValues.headers
+        ? Object.entries(initialValues.headers).map(([key, value]) => ({
+            key,
+            value,
+          }))
+        : [{ key: "", value: "" }];
+
       // 处理初始值中的查询参数
-      const queryParamsArray = initialValues.queryParams 
-        ? Object.entries(initialValues.queryParams).map(([key, value]) => ({ key, value }))
-        : [{ key: '', value: '' }];
-      
+      const queryParamsArray = initialValues.queryParams
+        ? Object.entries(initialValues.queryParams).map(([key, value]) => ({
+            key,
+            value,
+          }))
+        : [{ key: "", value: "" }];
+
       form.setFieldsValue({
         ...initialValues,
         headers: headersArray,
         queryParams: queryParamsArray,
       });
-      
+
       if (initialValues.enablePagination !== undefined) {
         setEnablePagination(initialValues.enablePagination);
       }
@@ -205,28 +220,32 @@ const FetchConfigForm: React.FC<FetchConfigFormProps> = ({
       if (initialValues.totalField) {
         setTotalField(initialValues.totalField);
       }
-      
+
       setInitialized(true);
     }
-    
+
     validateForm();
   }, [initialValues, initialized]);
 
   // 处理冒烟测试完成
   const handleSmokeTestComplete = (result: SmokeTestResponse) => {
     // 如果测试成功且有建议的分页字段，自动设置
-    if (result.success && result.suggestedPageFields && result.suggestedPageFields.length > 0) {
+    if (
+      result.success &&
+      result.suggestedPageFields &&
+      result.suggestedPageFields.length > 0
+    ) {
       setSuggestedPageFields(result.suggestedPageFields);
-      
+
       // 如果还没有选择分页字段，自动选择第一个建议字段
       if (!pageField && result.suggestedPageFields.length > 0) {
         const suggestedField = result.suggestedPageFields[0];
         setPageField(suggestedField);
-        form.setFieldValue('pageField', suggestedField);
+        form.setFieldValue("pageField", suggestedField);
         message.info(`检测到分页字段 "${suggestedField}"，已自动选择`);
       }
     }
-    
+
     // 调用原始回调
     onSmokeTestComplete?.(result);
   };
@@ -235,25 +254,29 @@ const FetchConfigForm: React.FC<FetchConfigFormProps> = ({
   const handleCurlParsed = (config: any) => {
     try {
       // 转换请求头格式 - 保留所有值，包括空值
-      const headersArray = Object.entries(config.headers || {}).map(([key, value]) => ({
-        key,
-        value: value || '', // 确保空值显示为空字符串而不是 undefined
-      }));
+      const headersArray = Object.entries(config.headers || {}).map(
+        ([key, value]) => ({
+          key,
+          value: value || "", // 确保空值显示为空字符串而不是 undefined
+        })
+      );
 
       // 确保至少有一个空的请求头输入框
       if (headersArray.length === 0) {
-        headersArray.push({ key: '', value: '' });
+        headersArray.push({ key: "", value: "" });
       }
 
       // 转换查询参数格式 - 保留所有值，包括空值
-      const queryParamsArray = Object.entries(config.queryParams || {}).map(([key, value]) => ({
-        key,
-        value: value || '', // 确保空值显示为空字符串而不是 undefined
-      }));
+      const queryParamsArray = Object.entries(config.queryParams || {}).map(
+        ([key, value]) => ({
+          key,
+          value: value || "", // 确保空值显示为空字符串而不是 undefined
+        })
+      );
 
       // 确保至少有一个空的查询参数输入框
       if (queryParamsArray.length === 0) {
-        queryParamsArray.push({ key: '', value: '' });
+        queryParamsArray.push({ key: "", value: "" });
       }
 
       // 填充表单
@@ -287,11 +310,11 @@ const FetchConfigForm: React.FC<FetchConfigFormProps> = ({
         // 触发表单验证
         setTimeout(validateForm, 100);
       }, 50);
-      
-      message.success('curl命令解析成功，已自动填充配置！');
+
+      message.success("curl命令解析成功，已自动填充配置！");
     } catch (error) {
-      console.error('处理curl解析结果时出错:', error);
-      message.error('处理解析结果时出错，请检查配置');
+      console.error("处理curl解析结果时出错:", error);
+      message.error("处理解析结果时出错，请检查配置");
     }
   };
 
@@ -300,11 +323,11 @@ const FetchConfigForm: React.FC<FetchConfigFormProps> = ({
     const values = form.getFieldsValue();
     const headers: Record<string, string> = {};
     const queryParams: Record<string, string> = {};
-    
+
     if (values.headers && Array.isArray(values.headers)) {
       values.headers.forEach((header: any) => {
         if (header?.key) {
-          headers[header.key] = header.value || '';
+          headers[header.key] = header.value || "";
         }
       });
     }
@@ -312,13 +335,13 @@ const FetchConfigForm: React.FC<FetchConfigFormProps> = ({
     if (values.queryParams && Array.isArray(values.queryParams)) {
       values.queryParams.forEach((param: any) => {
         if (param?.key) {
-          queryParams[param.key] = param.value || '';
+          queryParams[param.key] = param.value || "";
         }
       });
     }
 
     return {
-      apiUrl: values.apiUrl || '',
+      apiUrl: values.apiUrl || "",
       headers,
       queryParams,
       pageSize: values.pageSize || 20,
@@ -334,15 +357,24 @@ const FetchConfigForm: React.FC<FetchConfigFormProps> = ({
         initialValues={{
           enablePagination: false,
           pageSize: 20,
-          headers: [{ key: '', value: '' }],
-          queryParams: [{ key: '', value: '' }],
+          headers: [{ key: "", value: "" }],
+          queryParams: [{ key: "", value: "" }],
           ...initialValues,
         }}
         onValuesChange={handleValuesChange}
       >
         {/* API 配置标题和导入按钮 */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <Title level={5} style={{ margin: 0 }}>API 配置</Title>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 16,
+          }}
+        >
+          <Title level={5} style={{ margin: 0 }}>
+            API 配置
+          </Title>
           <Button
             type="default"
             icon={<ImportOutlined />}
@@ -353,11 +385,8 @@ const FetchConfigForm: React.FC<FetchConfigFormProps> = ({
             导入
           </Button>
         </div>
-        
-        <Form.Item
-          label="配置名称"
-          name="name"
-        >
+
+        <Form.Item label="配置名称" name="name">
           <Input placeholder="可选，不填写将自动生成" />
         </Form.Item>
 
@@ -365,8 +394,8 @@ const FetchConfigForm: React.FC<FetchConfigFormProps> = ({
           label="API URL"
           name="apiUrl"
           rules={[
-            { required: true, message: '请输入API URL' },
-            { type: 'url', message: '请输入有效的URL' },
+            { required: true, message: "请输入API URL" },
+            { type: "url", message: "请输入有效的URL" },
           ]}
         >
           <Input placeholder="https://api.example.com/data" />
@@ -377,7 +406,7 @@ const FetchConfigForm: React.FC<FetchConfigFormProps> = ({
             <span>
               数据路径
               <Tooltip title="指定返回数据中数组的位置，支持复杂路径如 '[0].data.rank_list' 或 'result.items'，不填写则使用整个返回数据">
-                <InfoCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                <InfoCircleOutlined style={{ marginLeft: 4, color: "#999" }} />
               </Tooltip>
             </span>
           }
@@ -387,12 +416,12 @@ const FetchConfigForm: React.FC<FetchConfigFormProps> = ({
         </Form.Item>
 
         {/* 请求头配置 */}
-        <Form.Item 
+        <Form.Item
           label={
             <span>
               请求头
               <Tooltip title="设置API请求需要的HTTP头部信息，如认证token、内容类型等">
-                <InfoCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                <InfoCircleOutlined style={{ marginLeft: 4, color: "#999" }} />
               </Tooltip>
             </span>
           }
@@ -405,7 +434,7 @@ const FetchConfigForm: React.FC<FetchConfigFormProps> = ({
                     <Col span={10}>
                       <Form.Item
                         {...restField}
-                        name={[name, 'key']}
+                        name={[name, "key"]}
                         style={{ marginBottom: 8 }}
                       >
                         <Input placeholder="请求头名称 (如: Authorization)" />
@@ -414,7 +443,7 @@ const FetchConfigForm: React.FC<FetchConfigFormProps> = ({
                     <Col span={12}>
                       <Form.Item
                         {...restField}
-                        name={[name, 'value']}
+                        name={[name, "value"]}
                         style={{ marginBottom: 8 }}
                       >
                         <Input placeholder="请求头值" />
@@ -431,18 +460,19 @@ const FetchConfigForm: React.FC<FetchConfigFormProps> = ({
                     </Col>
                   </Row>
                 ))}
-                <Space direction="vertical" style={{ width: '100%' }}>
+                <Space direction="vertical" style={{ width: "100%" }}>
                   <Button
                     type="dashed"
-                    onClick={() => add({ key: '', value: '' })}
+                    onClick={() => add({ key: "", value: "" })}
                     icon={<PlusOutlined />}
-                    style={{ width: '100%' }}
+                    style={{ width: "100%" }}
                   >
                     添加请求头
                   </Button>
-                  <div style={{ fontSize: 12, color: '#999' }}>
+                  <div style={{ fontSize: 12, color: "#999" }}>
                     <Text type="secondary">
-                      常用请求头：Authorization (认证)、Content-Type (内容类型)、X-API-Key (API密钥)
+                      常用请求头：Authorization (认证)、Content-Type
+                      (内容类型)、X-API-Key (API密钥)
                     </Text>
                   </div>
                 </Space>
@@ -452,12 +482,12 @@ const FetchConfigForm: React.FC<FetchConfigFormProps> = ({
         </Form.Item>
 
         {/* 查询参数配置 */}
-        <Form.Item 
+        <Form.Item
           label={
             <span>
               查询参数
               <Tooltip title="设置URL查询参数，如分页参数、筛选条件等">
-                <InfoCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                <InfoCircleOutlined style={{ marginLeft: 4, color: "#999" }} />
               </Tooltip>
             </span>
           }
@@ -470,7 +500,7 @@ const FetchConfigForm: React.FC<FetchConfigFormProps> = ({
                     <Col span={10}>
                       <Form.Item
                         {...restField}
-                        name={[name, 'key']}
+                        name={[name, "key"]}
                         style={{ marginBottom: 8 }}
                       >
                         <Input placeholder="参数名称 (如: page)" />
@@ -479,7 +509,7 @@ const FetchConfigForm: React.FC<FetchConfigFormProps> = ({
                     <Col span={12}>
                       <Form.Item
                         {...restField}
-                        name={[name, 'value']}
+                        name={[name, "value"]}
                         style={{ marginBottom: 8 }}
                       >
                         <Input placeholder="参数值" />
@@ -496,16 +526,16 @@ const FetchConfigForm: React.FC<FetchConfigFormProps> = ({
                     </Col>
                   </Row>
                 ))}
-                <Space direction="vertical" style={{ width: '100%' }}>
+                <Space direction="vertical" style={{ width: "100%" }}>
                   <Button
                     type="dashed"
-                    onClick={() => add({ key: '', value: '' })}
+                    onClick={() => add({ key: "", value: "" })}
                     icon={<PlusOutlined />}
-                    style={{ width: '100%' }}
+                    style={{ width: "100%" }}
                   >
                     添加查询参数
                   </Button>
-                  <div style={{ fontSize: 12, color: '#999' }}>
+                  <div style={{ fontSize: 12, color: "#999" }}>
                     <Text type="secondary">
                       常用参数：page (页码)、size/limit (每页数量)、sort (排序)
                     </Text>
@@ -522,18 +552,24 @@ const FetchConfigForm: React.FC<FetchConfigFormProps> = ({
         <Title level={5}>
           拉取模式
           <Tooltip title="选择数据拉取方式：分页拉取可以精确控制拉取范围，全部拉取会自动获取所有可用数据">
-            <InfoCircleOutlined style={{ marginLeft: 8, fontSize: 14, color: '#999' }} />
+            <InfoCircleOutlined
+              style={{ marginLeft: 8, fontSize: 14, color: "#999" }}
+            />
           </Tooltip>
         </Title>
-        
+
         <Form.Item name="enablePagination">
-          <FetchModeSelector 
+          <FetchModeSelector
             value={enablePagination}
             onChange={setEnablePagination}
             pageField={pageField}
             onPageFieldChange={setPageField}
             totalField={totalField}
             onTotalFieldChange={setTotalField}
+            paginationType={paginationType}
+            onPaginationTypeChange={setPaginationType}
+            stepSize={stepSize}
+            onStepSizeChange={setStepSize}
             suggestedPageFields={suggestedPageFields}
             suggestedTotalFields={suggestedTotalFields}
             disabled={disabled || loading}
@@ -558,7 +594,7 @@ const FetchConfigForm: React.FC<FetchConfigFormProps> = ({
         )}
 
         {/* 配置状态指示 */}
-        {formValid && (
+        {/* {formValid && (
           <Alert
             type="success"
             message="配置验证通过"
@@ -567,7 +603,7 @@ const FetchConfigForm: React.FC<FetchConfigFormProps> = ({
             showIcon
             icon={<CheckCircleOutlined />}
           />
-        )}
+        )} */}
 
         <Divider />
 
@@ -578,12 +614,12 @@ const FetchConfigForm: React.FC<FetchConfigFormProps> = ({
               {...getCurrentConfig()}
               onTestComplete={handleSmokeTestComplete}
               disabled={!formValid || loading}
-              style={{ width: '100%' }}
+              style={{ width: "100%" }}
             />
           </Col>
           <Col span={8}>
-            <Tooltip title={!formValid ? '请先完成配置验证' : ''}>
-              <Button 
+            <Tooltip title={!formValid ? "请先完成配置验证" : ""}>
+              <Button
                 disabled={!formValid || loading}
                 onClick={() => {
                   const values = form.getFieldsValue();
@@ -598,7 +634,7 @@ const FetchConfigForm: React.FC<FetchConfigFormProps> = ({
                     name: values.name,
                     dataPath: values.dataPath,
                   };
-                  
+
                   // 处理请求头
                   if (values.headers && Array.isArray(values.headers)) {
                     values.headers.forEach((header: any) => {
@@ -616,19 +652,19 @@ const FetchConfigForm: React.FC<FetchConfigFormProps> = ({
                       }
                     });
                   }
-                  
+
                   onSaveConfig?.(config);
-                  message.success('配置已保存');
+                  message.success("配置已保存");
                 }}
-                style={{ width: '100%' }}
+                style={{ width: "100%" }}
               >
                 保存配置
               </Button>
             </Tooltip>
           </Col>
           <Col span={8}>
-            <Tooltip title={!formValid ? '请先完成配置验证' : ''}>
-              <Button 
+            <Tooltip title={!formValid ? "请先完成配置验证" : ""}>
+              <Button
                 type="primary"
                 disabled={!formValid || loading}
                 loading={loading}
@@ -639,13 +675,14 @@ const FetchConfigForm: React.FC<FetchConfigFormProps> = ({
                     headers: {},
                     queryParams: {},
                     enablePagination: values.enablePagination,
+                    paginationType: values.paginationType || paginationType,
                     pageField: values.pageField,
                     totalField: values.totalField,
                     pageSize: values.pageSize,
                     name: values.name,
                     dataPath: values.dataPath,
                   };
-                  
+
                   // 处理请求头
                   if (values.headers && Array.isArray(values.headers)) {
                     values.headers.forEach((header: any) => {
@@ -663,10 +700,10 @@ const FetchConfigForm: React.FC<FetchConfigFormProps> = ({
                       }
                     });
                   }
-                  
+
                   onStartFetch?.(config);
                 }}
-                style={{ width: '100%' }}
+                style={{ width: "100%" }}
               >
                 开始拉取
               </Button>

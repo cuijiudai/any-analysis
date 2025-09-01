@@ -1,13 +1,23 @@
-import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
-import { HttpClientService } from '../../common/http-client';
-import { CurlParserService } from '../../common/utils';
-import { DynamicTableUtil } from '../../common/database-utils';
-import { FetchConfig } from '../../entities/fetch-config.entity';
-import { DataSession } from '../../entities/data-session.entity';
-import { DataTableSchema } from '../../entities/data-table-schema.entity';
-import { SmokeTestDto, ParseCurlDto, CreateFetchConfigDto, ExecuteFetchDto } from './dto';
+import {
+  Injectable,
+  Logger,
+  BadRequestException,
+  NotFoundException,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository, DataSource } from "typeorm";
+import { HttpClientService } from "../../common/http-client";
+import { CurlParserService } from "../../common/utils";
+import { DynamicTableUtil } from "../../common/database-utils";
+import { FetchConfig } from "../../entities/fetch-config.entity";
+import { DataSession } from "../../entities/data-session.entity";
+import { DataTableSchema } from "../../entities/data-table-schema.entity";
+import {
+  SmokeTestDto,
+  ParseCurlDto,
+  CreateFetchConfigDto,
+  ExecuteFetchDto,
+} from "./dto";
 
 export interface SmokeTestResponse {
   success: boolean;
@@ -51,21 +61,23 @@ export class DataFetchService {
     private readonly dataSessionRepository: Repository<DataSession>,
     @InjectRepository(DataTableSchema)
     private readonly dataTableSchemaRepository: Repository<DataTableSchema>,
-    private readonly dataSource: DataSource,
+    private readonly dataSource: DataSource
   ) {}
 
   /**
    * 执行冒烟测试
    * 不存储任何数据，仅用于验证API配置
    */
-  async executeSmokeTest(smokeTestDto: SmokeTestDto): Promise<SmokeTestResponse> {
-    const { 
-      apiUrl, 
-      method = 'GET', 
-      headers = {}, 
+  async executeSmokeTest(
+    smokeTestDto: SmokeTestDto
+  ): Promise<SmokeTestResponse> {
+    const {
+      apiUrl,
+      method = "GET",
+      headers = {},
       queryParams = {},
-      data, 
-      pageSize
+      data,
+      pageSize,
     } = smokeTestDto;
     const startTime = Date.now();
 
@@ -77,7 +89,7 @@ export class DataFetchService {
       try {
         parsedUrl = new URL(apiUrl);
       } catch {
-        throw new BadRequestException('URL格式无效');
+        throw new BadRequestException("URL格式无效");
       }
 
       // 构建不带查询参数的基础URL
@@ -93,7 +105,7 @@ export class DataFetchService {
       });
 
       // 添加前端传递的查询参数（优先级最高）
-      if (queryParams && typeof queryParams === 'object') {
+      if (queryParams && typeof queryParams === "object") {
         Object.entries(queryParams).forEach(([key, value]) => {
           if (key && value !== undefined && value !== null) {
             requestParams[key] = value;
@@ -102,24 +114,31 @@ export class DataFetchService {
       }
 
       // 智能识别和处理分页参数
-      const paginationInfo = this.detectPaginationFields(requestParams, requestData);
-      
+      const paginationInfo = this.detectPaginationFields(
+        requestParams,
+        requestData
+      );
+
       // 只有在没有检测到任何分页参数且前端没有传递查询参数时，才添加默认分页参数
       const hasQueryParams = queryParams && Object.keys(queryParams).length > 0;
-      
-      this.logger.log(`调试信息 - requestParams: ${JSON.stringify(requestParams)}`);
-      this.logger.log(`调试信息 - paginationInfo: ${JSON.stringify(paginationInfo)}`);
+
+      this.logger.log(
+        `调试信息 - requestParams: ${JSON.stringify(requestParams)}`
+      );
+      this.logger.log(
+        `调试信息 - paginationInfo: ${JSON.stringify(paginationInfo)}`
+      );
       this.logger.log(`调试信息 - hasQueryParams: ${hasQueryParams}`);
-      
+
       if (!paginationInfo.hasExistingPagination && !hasQueryParams) {
         if (pageSize) {
-          if (method === 'GET') {
+          if (method === "GET") {
             // GET 请求：在查询参数中添加分页信息
             requestParams[paginationInfo.pageField] = 1;
             requestParams[paginationInfo.pageSizeField] = pageSize;
-          } else if (method === 'POST' && requestData) {
+          } else if (method === "POST" && requestData) {
             // POST 请求：在请求体中添加分页信息
-            if (typeof requestData === 'object' && requestData !== null) {
+            if (typeof requestData === "object" && requestData !== null) {
               requestData = {
                 ...requestData,
                 [paginationInfo.pageField]: 1,
@@ -156,27 +175,43 @@ export class DataFetchService {
       // 如果指定了 dataPath，使用路径提取数据
       if (smokeTestDto.dataPath) {
         try {
-          const extractedData = this.extractDataByPath(responseData, smokeTestDto.dataPath);
+          const extractedData = this.extractDataByPath(
+            responseData,
+            smokeTestDto.dataPath
+          );
           if (Array.isArray(extractedData)) {
-            sampleData = pageSize ? extractedData.slice(0, pageSize) : extractedData;
+            sampleData = pageSize
+              ? extractedData.slice(0, pageSize)
+              : extractedData;
           } else {
             sampleData = [extractedData];
           }
         } catch (error) {
           this.logger.warn(`数据路径提取失败: ${error.message}，使用默认逻辑`);
-          sampleData = this.extractDataWithDefaultLogic(responseData, pageSize || 0);
+          sampleData = this.extractDataWithDefaultLogic(
+            responseData,
+            pageSize || 0
+          );
         }
       } else {
-        sampleData = this.extractDataWithDefaultLogic(responseData, pageSize || 0);
+        sampleData = this.extractDataWithDefaultLogic(
+          responseData,
+          pageSize || 0
+        );
       }
 
       // 分析数据结构
       const dataStructure = this.analyzeDataStructure(sampleData);
 
       // 检测建议的分页字段
-      const suggestedPageFields = this.detectSuggestedPageFields(requestParams, requestData);
+      const suggestedPageFields = this.detectSuggestedPageFields(
+        requestParams,
+        requestData
+      );
 
-      this.logger.log(`冒烟测试成功，响应时间: ${responseTime}ms，获得 ${sampleData.length} 条样本数据`);
+      this.logger.log(
+        `冒烟测试成功，响应时间: ${responseTime}ms，获得 ${sampleData.length} 条样本数据`
+      );
 
       return {
         success: true,
@@ -188,16 +223,16 @@ export class DataFetchService {
       };
     } catch (error) {
       const responseTime = Date.now() - startTime;
-      
+
       this.logger.error(`冒烟测试失败: ${error.message}`);
 
-      let errorMessage = '连接失败';
+      let errorMessage = "连接失败";
       if (error.response) {
         errorMessage = `HTTP ${error.response.status}: ${error.response.statusText}`;
-      } else if (error.code === 'ECONNREFUSED') {
-        errorMessage = '连接被拒绝，请检查URL和网络连接';
-      } else if (error.code === 'ETIMEDOUT') {
-        errorMessage = '请求超时，请检查网络连接或增加超时时间';
+      } else if (error.code === "ECONNREFUSED") {
+        errorMessage = "连接被拒绝，请检查URL和网络连接";
+      } else if (error.code === "ETIMEDOUT") {
+        errorMessage = "请求超时，请检查网络连接或增加超时时间";
       } else if (error.message) {
         errorMessage = error.message;
       }
@@ -214,10 +249,12 @@ export class DataFetchService {
   /**
    * 解析curl命令
    */
-  async parseCurlCommand(parseCurlDto: ParseCurlDto): Promise<ParseCurlResponse> {
+  async parseCurlCommand(
+    parseCurlDto: ParseCurlDto
+  ): Promise<ParseCurlResponse> {
     const { curlCommand } = parseCurlDto;
 
-    this.logger.log('开始解析curl命令');
+    this.logger.log("开始解析curl命令");
 
     try {
       const result = this.curlParserService.parseCurlCommand(curlCommand);
@@ -230,15 +267,17 @@ export class DataFetchService {
       }
 
       // 验证解析结果
-      const validationErrors = this.curlParserService.validateParsedConfig(result.config);
+      const validationErrors = this.curlParserService.validateParsedConfig(
+        result.config
+      );
       if (validationErrors.length > 0) {
         return {
           success: false,
-          error: `配置验证失败: ${validationErrors.join(', ')}`,
+          error: `配置验证失败: ${validationErrors.join(", ")}`,
         };
       }
 
-      this.logger.log('curl命令解析成功');
+      this.logger.log("curl命令解析成功");
 
       return {
         success: true,
@@ -289,8 +328,8 @@ export class DataFetchService {
     const fieldMap = new Map<string, { type: string; sampleValue: any }>();
 
     // 分析所有数据项的字段
-    data.forEach((item) => {
-      if (typeof item === 'object' && item !== null) {
+    data.forEach(item => {
+      if (typeof item === "object" && item !== null) {
         Object.entries(item).forEach(([key, value]) => {
           if (!fieldMap.has(key)) {
             fieldMap.set(key, {
@@ -319,42 +358,44 @@ export class DataFetchService {
    */
   private getFieldType(value: any): string {
     if (value === null || value === undefined) {
-      return 'null';
+      return "null";
     }
 
     const type = typeof value;
 
     switch (type) {
-      case 'boolean':
-        return 'boolean';
-      case 'number':
-        return Number.isInteger(value) ? 'integer' : 'number';
-      case 'string':
+      case "boolean":
+        return "boolean";
+      case "number":
+        return Number.isInteger(value) ? "integer" : "number";
+      case "string":
         // 尝试识别特殊格式
         if (/^\d{4}-\d{2}-\d{2}/.test(value)) {
-          return 'date';
+          return "date";
         }
         if (/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/.test(value)) {
-          return 'email';
+          return "email";
         }
         if (/^https?:\/\//.test(value)) {
-          return 'url';
+          return "url";
         }
-        return 'string';
-      case 'object':
+        return "string";
+      case "object":
         if (Array.isArray(value)) {
-          return 'array';
+          return "array";
         }
-        return 'object';
+        return "object";
       default:
-        return 'unknown';
+        return "unknown";
     }
   }
 
   /**
    * 创建拉取配置
    */
-  async createFetchConfig(createFetchConfigDto: CreateFetchConfigDto): Promise<FetchConfig> {
+  async createFetchConfig(
+    createFetchConfigDto: CreateFetchConfigDto
+  ): Promise<FetchConfig> {
     const { sessionId, name, ...configData } = createFetchConfigDto;
 
     // 验证会话是否存在
@@ -397,7 +438,7 @@ export class DataFetchService {
   async getFetchConfig(sessionId: string): Promise<FetchConfig> {
     const config = await this.fetchConfigRepository.findOne({
       where: { sessionId },
-      relations: ['session'],
+      relations: ["session"],
     });
 
     if (!config) {
@@ -430,12 +471,12 @@ export class DataFetchService {
 
     try {
       // 第一步：拉取第一页数据分析结构
-      this.logger.log('拉取第一页数据进行结构分析...');
-      
+      this.logger.log("拉取第一页数据进行结构分析...");
+
       // 解析URL并保留原有查询参数
       const parsedUrl = new URL(config.apiUrl);
       const baseUrl = `${parsedUrl.protocol}//${parsedUrl.host}${parsedUrl.pathname}`;
-      
+
       // 准备请求参数
       let requestParams: Record<string, any> = {};
       let requestData = config.data;
@@ -446,7 +487,7 @@ export class DataFetchService {
       });
 
       // 添加配置中保存的查询参数
-      if (config.queryParams && typeof config.queryParams === 'object') {
+      if (config.queryParams && typeof config.queryParams === "object") {
         Object.entries(config.queryParams).forEach(([key, value]) => {
           if (key && value !== undefined && value !== null) {
             requestParams[key] = value;
@@ -455,35 +496,89 @@ export class DataFetchService {
       }
 
       // 处理分页参数（如果启用分页）
+      let startPageValue = 1; // 默认初始值
       if (config.enablePagination && config.pageField) {
-        // 使用配置的页面大小，如果没有设置则使用默认值50（适合拉取全部模式）
-        const effectivePageSize = config.pageSize || 50;
-        
-        if (config.method === 'GET') {
+        // 从配置中获取分页字段的当前值作为初始值
+        if (config.method === "GET") {
+          // GET请求：从 queryParams 中获取
+          if (config.queryParams && config.queryParams[config.pageField]) {
+            startPageValue =
+              parseInt(config.queryParams[config.pageField]) || 1;
+          } else if (requestParams[config.pageField]) {
+            startPageValue = parseInt(requestParams[config.pageField]) || 1;
+          }
+        } else if (config.method === "POST" && requestData) {
+          // POST请求：从请求体中获取
+          if (
+            typeof requestData === "object" &&
+            requestData !== null &&
+            requestData[config.pageField]
+          ) {
+            startPageValue = parseInt(requestData[config.pageField]) || 1;
+          }
+        }
+
+        if (config.method === "GET") {
           // GET 请求：分页参数放在 URL 查询参数中
-          requestParams[config.pageField] = 1; // 从第1页开始
-          
-          // 尝试常见的页大小字段名
-          const sizeFields = ['size', 'pageSize', 'limit', 'count', 'rows', 'per_page'];
-          const sizeField = sizeFields.find(field => 
-            parsedUrl.searchParams.has(field) || (requestData && requestData[field])
-          ) || 'size';
-          requestParams[sizeField] = effectivePageSize;
-        } else if (config.method === 'POST' && requestData) {
+          requestParams[config.pageField] = startPageValue;
+
+          // 只有在配置了pageSize时才设置页大小参数
+          if (config.pageSize) {
+            const sizeFields = [
+              "size",
+              "pageSize",
+              "limit",
+              "count",
+              "rows",
+              "per_page",
+            ];
+            const sizeField =
+              sizeFields.find(
+                field =>
+                  parsedUrl.searchParams.has(field) ||
+                  (requestData && requestData[field])
+              ) || "size";
+            requestParams[sizeField] = config.pageSize;
+          }
+        } else if (config.method === "POST" && requestData) {
           // POST 请求：分页参数可能在请求体中
-          if (typeof requestData === 'object' && requestData !== null) {
+          if (typeof requestData === "object" && requestData !== null) {
             requestData = {
               ...requestData,
-              [config.pageField]: 1,
+              [config.pageField]: startPageValue,
             };
-            
-            const sizeFields = ['size', 'pageSize', 'limit', 'count', 'rows', 'per_page'];
-            const sizeField = sizeFields.find(field => requestData[field]) || 'size';
-            requestData[sizeField] = effectivePageSize;
+
+            // 只有在配置了pageSize时才设置页大小参数
+            if (config.pageSize) {
+              const sizeFields = [
+                "size",
+                "pageSize",
+                "limit",
+                "count",
+                "rows",
+                "per_page",
+              ];
+              const sizeField =
+                sizeFields.find(field => requestData[field]) || "size";
+              requestData[sizeField] = config.pageSize;
+            }
           }
         }
       }
-      
+
+      this.logger.log(
+        `检测到分页字段 ${config.pageField} 的初始值: ${startPageValue}`
+      );
+      this.logger.log(`第1页请求参数 - URL: ${baseUrl}`);
+      this.logger.log(`第1页请求参数 - Method: ${config.method}`);
+      this.logger.log(
+        `第1页请求参数 - Headers: ${JSON.stringify(config.headers || {})}`
+      );
+      this.logger.log(
+        `第1页请求参数 - Params: ${JSON.stringify(requestParams)}`
+      );
+      this.logger.log(`第1页请求参数 - Data: ${JSON.stringify(requestData)}`);
+
       const firstPageResponse = await this.httpClientService.request({
         url: baseUrl,
         method: config.method as any,
@@ -494,6 +589,9 @@ export class DataFetchService {
         retries: 2,
       });
 
+      this.logger.log(`第1页响应状态: ${firstPageResponse.status}`);
+      this.logger.log(`第1页响应数据类型: ${typeof firstPageResponse.data}`);
+
       // 处理第一页数据
       let firstPageData: any[] = [];
       const responseData = firstPageResponse.data;
@@ -501,7 +599,10 @@ export class DataFetchService {
       // 如果指定了 dataPath，使用路径提取数据
       if (config.dataPath) {
         try {
-          const extractedData = this.extractDataByPath(responseData, config.dataPath);
+          const extractedData = this.extractDataByPath(
+            responseData,
+            config.dataPath
+          );
           if (Array.isArray(extractedData)) {
             firstPageData = extractedData;
           } else {
@@ -509,14 +610,16 @@ export class DataFetchService {
           }
         } catch (error) {
           this.logger.warn(`数据路径提取失败: ${error.message}，使用默认逻辑`);
-          firstPageData = this.extractDataWithDefaultLogic(responseData, config.pageSize || 50);
+          firstPageData = this.extractDataWithDefaultLogic(responseData, 0); // 不限制数据数量
         }
       } else {
-        firstPageData = this.extractDataWithDefaultLogic(responseData, config.pageSize || 50);
+        firstPageData = this.extractDataWithDefaultLogic(responseData, 0); // 不限制数据数量
       }
 
+      this.logger.log(`第1页提取到数据数量: ${firstPageData.length}`);
+
       if (firstPageData.length === 0) {
-        throw new BadRequestException('API返回空数据');
+        throw new BadRequestException("API返回空数据");
       }
 
       // 检查是否已存在数据表结构
@@ -527,7 +630,8 @@ export class DataFetchService {
 
       if (!tableSchema) {
         // 第一次拉取：分析数据结构并创建动态表
-        const fieldDefinitions = DynamicTableUtil.analyzeDataStructure(firstPageData);
+        const fieldDefinitions =
+          DynamicTableUtil.analyzeDataStructure(firstPageData);
 
         this.logger.log(`创建动态表: ${tableName}`);
         await DynamicTableUtil.createDynamicTable(
@@ -568,18 +672,20 @@ export class DataFetchService {
       // 第二步：根据配置拉取剩余数据
       if (config.enablePagination && config.pageField) {
         // 分页拉取模式：持续拉取直到没有更多数据
-        let currentPage = 2; // 从第2页开始（第1页已经拉取）
+        const paginationType = config.paginationType || "page";
+        const pageSize = config.pageSize || 20;
+        let currentPageIndex = 2; // 页码索引，从2开始（第1页已经拉取）
         const maxPages = 1000; // 防止无限拉取
 
-        while (currentPage <= maxPages) {
-          this.logger.log(`拉取第 ${currentPage} 页数据...`);
+        while (currentPageIndex <= maxPages) {
+          this.logger.log(`拉取第 ${currentPageIndex} 页数据...`);
 
           // 重新构建分页参数，保留原有查询参数和配置中的查询参数
           let pageParams = { ...requestParams };
           let pageRequestData = config.data;
 
           // 确保配置中的查询参数也包含在分页请求中
-          if (config.queryParams && typeof config.queryParams === 'object') {
+          if (config.queryParams && typeof config.queryParams === "object") {
             Object.entries(config.queryParams).forEach(([key, value]) => {
               if (key && value !== undefined && value !== null) {
                 pageParams[key] = value;
@@ -587,13 +693,44 @@ export class DataFetchService {
             });
           }
 
-          if (config.method === 'GET') {
-            pageParams[config.pageField] = currentPage;
-          } else if (config.method === 'POST' && pageRequestData) {
-            if (typeof pageRequestData === 'object' && pageRequestData !== null) {
-              pageRequestData = { ...pageRequestData, [config.pageField]: currentPage };
+          // 根据分页方式计算分页参数值
+          let pageFieldValue;
+          if (paginationType === "offset") {
+            // 索引方式：使用步长计算偏移量
+            const stepSize = config.stepSize || pageSize;
+            pageFieldValue = startPageValue + (currentPageIndex - 1) * stepSize;
+          } else {
+            // 页码方式：直接递增页码
+            pageFieldValue = startPageValue + currentPageIndex - 1;
+          }
+
+          if (config.method === "GET") {
+            pageParams[config.pageField] = pageFieldValue;
+          } else if (config.method === "POST" && pageRequestData) {
+            if (
+              typeof pageRequestData === "object" &&
+              pageRequestData !== null
+            ) {
+              pageRequestData = {
+                ...pageRequestData,
+                [config.pageField]: pageFieldValue,
+              };
             }
           }
+
+          this.logger.log(`第${currentPageIndex}页请求参数 - URL: ${baseUrl}`);
+          this.logger.log(
+            `第${currentPageIndex}页请求参数 - Method: ${config.method}`
+          );
+          this.logger.log(
+            `第${currentPageIndex}页请求参数 - Headers: ${JSON.stringify(config.headers || {})}`
+          );
+          this.logger.log(
+            `第${currentPageIndex}页请求参数 - Params: ${JSON.stringify(pageParams)}`
+          );
+          this.logger.log(
+            `第${currentPageIndex}页请求参数 - Data: ${JSON.stringify(pageRequestData)}`
+          );
 
           const pageResponse = await this.httpClientService.request({
             url: baseUrl,
@@ -605,28 +742,44 @@ export class DataFetchService {
             retries: 2,
           });
 
+          this.logger.log(
+            `第${currentPageIndex}页响应状态: ${pageResponse.status}`
+          );
+          this.logger.log(
+            `第${currentPageIndex}页响应数据类型: ${typeof pageResponse.data}`
+          );
+
           let pageData: any[] = [];
           const pageResponseData = pageResponse.data;
 
           // 如果指定了 dataPath，使用路径提取数据
           if (config.dataPath) {
             try {
-              const extractedData = this.extractDataByPath(pageResponseData, config.dataPath);
+              const extractedData = this.extractDataByPath(
+                pageResponseData,
+                config.dataPath
+              );
               if (Array.isArray(extractedData)) {
                 pageData = extractedData;
               } else {
                 pageData = [extractedData];
               }
             } catch (error) {
-              this.logger.warn(`第 ${currentPage} 页数据路径提取失败: ${error.message}，使用默认逻辑`);
-              pageData = this.extractDataWithDefaultLogic(pageResponseData, config.pageSize || 50);
+              this.logger.warn(
+                `第 ${currentPageIndex} 页数据路径提取失败: ${error.message}，使用默认逻辑`
+              );
+              pageData = this.extractDataWithDefaultLogic(pageResponseData, 0); // 不限制数据数量
             }
           } else {
-            pageData = this.extractDataWithDefaultLogic(pageResponseData, config.pageSize || 50);
+            pageData = this.extractDataWithDefaultLogic(pageResponseData, 0); // 不限制数据数量
           }
 
+          this.logger.log(
+            `第${currentPageIndex}页提取到数据数量: ${pageData.length}`
+          );
+
           if (pageData.length === 0) {
-            this.logger.log(`第 ${currentPage} 页无数据，停止拉取`);
+            this.logger.log(`第 ${currentPageIndex} 页无数据，停止拉取`);
             break;
           }
 
@@ -636,7 +789,7 @@ export class DataFetchService {
               tableName,
               pageData,
               sessionId,
-              currentPage
+              currentPageIndex
             );
 
             // 重新查询实际的记录数
@@ -646,18 +799,23 @@ export class DataFetchService {
             );
             totalRecords = parseInt(currentRecordsResult[0]?.count || 0);
             pagesProcessed++;
-            currentPage++;
+            currentPageIndex++;
 
-            // 如果当前页数据少于页大小，说明是最后一页
-            if (pageData.length < config.pageSize) {
-              this.logger.log(`第 ${currentPage - 1} 页数据不足，判断为最后一页`);
+            // 如果配置了pageSize，则根据页大小判断是否为最后一页
+            if (config.pageSize && pageData.length < config.pageSize) {
+              this.logger.log(
+                `第 ${currentPageIndex - 1} 页数据不足，判断为最后一页`
+              );
               break;
             }
+            // 如果没有配置 pageSize，则依赖于 pageData.length === 0 的判断来停止拉取
 
             // 添加延迟避免请求过于频繁
             await new Promise(resolve => setTimeout(resolve, 200));
           } catch (error) {
-            this.logger.warn(`第 ${currentPage} 页拉取失败，停止拉取: ${error.message}`);
+            this.logger.warn(
+              `第 ${currentPageIndex} 页拉取失败，停止拉取: ${error.message}`
+            );
             break;
           }
         }
@@ -665,7 +823,9 @@ export class DataFetchService {
 
       await queryRunner.commitTransaction();
 
-      this.logger.log(`数据拉取完成，共处理 ${pagesProcessed} 页，获得 ${totalRecords} 条记录`);
+      this.logger.log(
+        `数据拉取完成，共处理 ${pagesProcessed} 页，获得 ${totalRecords} 条记录`
+      );
 
       return {
         success: true,
@@ -677,7 +837,7 @@ export class DataFetchService {
     } catch (error) {
       await queryRunner.rollbackTransaction();
       this.logger.error(`数据拉取失败: ${error.message}`, error.stack);
-      
+
       return {
         success: false,
         message: `数据拉取失败: ${error.message}`,
@@ -694,7 +854,7 @@ export class DataFetchService {
    * 获取拉取状态
    */
   async getFetchStatus(sessionId: string): Promise<{
-    status: 'pending' | 'running' | 'completed' | 'failed';
+    status: "pending" | "running" | "completed" | "failed";
     progress?: number;
     totalPages?: number;
     completedPages?: number;
@@ -716,7 +876,7 @@ export class DataFetchService {
     });
 
     if (!tableSchema) {
-      return { status: 'pending' };
+      return { status: "pending" };
     }
 
     try {
@@ -727,12 +887,12 @@ export class DataFetchService {
       const totalRecords = parseInt(result[0]?.count || 0);
 
       return {
-        status: totalRecords > 0 ? 'completed' : 'pending',
+        status: totalRecords > 0 ? "completed" : "pending",
         totalRecords,
       };
     } catch (error) {
       return {
-        status: 'failed',
+        status: "failed",
         error: error.message,
       };
     }
@@ -774,7 +934,6 @@ export class DataFetchService {
       // 查询数据
       const dataResult = await this.dataSource.query(
         `SELECT * FROM \`${tableSchema.tableName}\` 
-         ORDER BY page_number, data_index 
          LIMIT ? OFFSET ?`,
         [pageSize, offset]
       );
@@ -789,7 +948,7 @@ export class DataFetchService {
       };
     } catch (error) {
       this.logger.error(`查询数据失败: ${error.message}`);
-      throw new BadRequestException('查询数据失败');
+      throw new BadRequestException("查询数据失败");
     }
   }
 
@@ -819,12 +978,12 @@ export class DataFetchService {
       const totalRecords = parseInt(countResult[0]?.count || 0);
 
       // 获取字段数
-      const totalFields = tableSchema.fieldDefinitions 
-        ? Object.keys(tableSchema.fieldDefinitions).length 
+      const totalFields = tableSchema.fieldDefinitions
+        ? Object.keys(tableSchema.fieldDefinitions).length
         : 0;
 
       // 查询表大小（MySQL）
-      let tableSize = 'N/A';
+      let tableSize = "N/A";
       try {
         const sizeResult = await this.dataSource.query(
           `SELECT 
@@ -845,11 +1004,12 @@ export class DataFetchService {
         totalRecords,
         totalFields,
         tableSize,
-        created: tableSchema.createdAt?.toISOString() || new Date().toISOString(),
+        created:
+          tableSchema.createdAt?.toISOString() || new Date().toISOString(),
       };
     } catch (error) {
       this.logger.error(`获取数据统计失败: ${error.message}`);
-      throw new BadRequestException('获取数据统计失败');
+      throw new BadRequestException("获取数据统计失败");
     }
   }
 
@@ -857,7 +1017,7 @@ export class DataFetchService {
    * 智能检测分页字段
    */
   private detectPaginationFields(
-    queryParams: Record<string, any>, 
+    queryParams: Record<string, any>,
     requestData?: any
   ): {
     hasExistingPagination: boolean;
@@ -866,11 +1026,28 @@ export class DataFetchService {
     detectedFields: string[];
   } {
     // 常见的分页字段名
-    const pageFieldNames = ['page', 'pageNum', 'pageIndex', 'p', 'pageNo', 'current', 'offset'];
-    const sizeFieldNames = ['size', 'pageSize', 'limit', '_limit', 'count', 'rows', 'per_page', 'ps'];
+    const pageFieldNames = [
+      "page",
+      "pageNum",
+      "pageIndex",
+      "p",
+      "pageNo",
+      "current",
+      "offset",
+    ];
+    const sizeFieldNames = [
+      "size",
+      "pageSize",
+      "limit",
+      "_limit",
+      "count",
+      "rows",
+      "per_page",
+      "ps",
+    ];
 
-    let detectedPageField = 'page';
-    let detectedSizeField = 'size';
+    let detectedPageField = "page";
+    let detectedSizeField = "size";
     let hasExistingPagination = false;
     const detectedFields: string[] = [];
 
@@ -894,7 +1071,7 @@ export class DataFetchService {
     }
 
     // 检查请求体中的分页字段
-    if (requestData && typeof requestData === 'object') {
+    if (requestData && typeof requestData === "object") {
       for (const field of pageFieldNames) {
         if (requestData.hasOwnProperty(field)) {
           detectedPageField = field;
@@ -926,11 +1103,19 @@ export class DataFetchService {
    * 检测建议的分页字段
    */
   private detectSuggestedPageFields(
-    queryParams: Record<string, any>, 
+    queryParams: Record<string, any>,
     requestData?: any
   ): string[] {
     const suggestedFields: string[] = [];
-    const pageFieldNames = ['page', 'pageNum', 'pageIndex', 'p', 'pageNo', 'current', 'offset'];
+    const pageFieldNames = [
+      "page",
+      "pageNum",
+      "pageIndex",
+      "p",
+      "pageNo",
+      "current",
+      "offset",
+    ];
 
     // 检查查询参数中的分页字段
     for (const field of pageFieldNames) {
@@ -940,9 +1125,12 @@ export class DataFetchService {
     }
 
     // 检查请求体中的分页字段
-    if (requestData && typeof requestData === 'object') {
+    if (requestData && typeof requestData === "object") {
       for (const field of pageFieldNames) {
-        if (requestData.hasOwnProperty(field) && !suggestedFields.includes(field)) {
+        if (
+          requestData.hasOwnProperty(field) &&
+          !suggestedFields.includes(field)
+        ) {
           suggestedFields.push(field);
         }
       }
@@ -961,11 +1149,11 @@ export class DataFetchService {
 
     try {
       // 处理复杂路径，如 [0].data.rank_list
-      const pathParts = path.split('.');
+      const pathParts = path.split(".");
       let current = data;
 
       for (const part of pathParts) {
-        if (part.includes('[') && part.includes(']')) {
+        if (part.includes("[") && part.includes("]")) {
           // 处理数组索引，如 [0] 或 items[0]
           const match = part.match(/^([^\[]*)?\[(\d+)\]$/);
           if (match) {
@@ -995,21 +1183,30 @@ export class DataFetchService {
   /**
    * 默认数据提取逻辑
    */
-  private extractDataWithDefaultLogic(responseData: any, pageSize: number): any[] {
+  private extractDataWithDefaultLogic(
+    responseData: any,
+    pageSize: number
+  ): any[] {
     // 尝试不同的数据结构
     if (Array.isArray(responseData)) {
       return pageSize > 0 ? responseData.slice(0, pageSize) : responseData;
     } else if (responseData.data && Array.isArray(responseData.data)) {
-      return pageSize > 0 ? responseData.data.slice(0, pageSize) : responseData.data;
+      return pageSize > 0
+        ? responseData.data.slice(0, pageSize)
+        : responseData.data;
     } else if (responseData.items && Array.isArray(responseData.items)) {
-      return pageSize > 0 ? responseData.items.slice(0, pageSize) : responseData.items;
+      return pageSize > 0
+        ? responseData.items.slice(0, pageSize)
+        : responseData.items;
     } else if (responseData.results && Array.isArray(responseData.results)) {
-      return pageSize > 0 ? responseData.results.slice(0, pageSize) : responseData.results;
-    } else if (typeof responseData === 'object' && responseData !== null) {
+      return pageSize > 0
+        ? responseData.results.slice(0, pageSize)
+        : responseData.results;
+    } else if (typeof responseData === "object" && responseData !== null) {
       // 如果返回的是单个对象，包装成数组
       return [responseData];
     } else {
-      this.logger.warn('响应数据格式不识别，使用原始数据');
+      this.logger.warn("响应数据格式不识别，使用原始数据");
       return [responseData];
     }
   }

@@ -1,20 +1,31 @@
-import React from 'react';
-import { Card, Typography, Badge, Space, Button, Divider, Row, Col, Progress, Alert } from 'antd';
-import { 
-  SettingOutlined, 
+import React from "react";
+import {
+  Card,
+  Typography,
+  Badge,
+  Space,
+  Button,
+  Divider,
+  Row,
+  Col,
+  Progress,
+  Alert,
+} from "antd";
+import {
+  SettingOutlined,
   RocketOutlined,
   CheckCircleOutlined,
-  ArrowRightOutlined
-} from '@ant-design/icons';
-import FetchConfigForm from './FetchConfigForm';
-import DataPreview from './DataPreview';
-import FetchedDataPreview from './FetchedDataPreview';
-import { FetchConfig, SmokeTestResponse } from '../../types';
+  ArrowRightOutlined,
+} from "@ant-design/icons";
+import FetchConfigForm from "./FetchConfigForm";
+import DataPreview from "./DataPreview";
+import FetchedDataPreview from "./FetchedDataPreview";
+import { FetchConfig, SmokeTestResponse } from "../../types";
 
 const { Title, Text } = Typography;
 
 interface FetchStatus {
-  status: 'pending' | 'running' | 'completed' | 'failed';
+  status: "pending" | "running" | "completed" | "failed";
   progress?: number;
   totalPages?: number;
   completedPages?: number;
@@ -47,7 +58,7 @@ export const FetchConfigWrapper: React.FC<FetchConfigWrapperProps> = ({
   smokeTestResult,
   onEnterAnnotation,
   onEnterDataAnalysis,
-  sessionId
+  sessionId,
 }) => {
   return (
     <div className="fetch-config-wrapper">
@@ -64,24 +75,24 @@ export const FetchConfigWrapper: React.FC<FetchConfigWrapperProps> = ({
         </Col>
         <Col xs={24} lg={14}>
           {/* 拉取进度显示 */}
-          {fetchStatus?.status === 'running' && (
-            <Card 
-              title="数据拉取进度" 
-              style={{ 
+          {fetchStatus?.status === "running" && (
+            <Card
+              title="数据拉取进度"
+              style={{
                 marginBottom: 16,
                 borderRadius: 12,
-                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)'
+                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
               }}
             >
-              <div style={{ textAlign: 'center', padding: '20px' }}>
-                <Progress 
-                  type="circle" 
-                  percent={fetchStatus.progress || 0} 
+              <div style={{ textAlign: "center", padding: "20px" }}>
+                <Progress
+                  type="circle"
+                  percent={fetchStatus.progress || 0}
                   status="active"
-                  format={(percent) => `${percent}%`}
+                  format={percent => `${percent}%`}
                   strokeColor={{
-                    '0%': '#1890ff',
-                    '100%': '#52c41a',
+                    "0%": "#1890ff",
+                    "100%": "#52c41a",
                   }}
                 />
                 <div style={{ marginTop: 16 }}>
@@ -89,7 +100,8 @@ export const FetchConfigWrapper: React.FC<FetchConfigWrapperProps> = ({
                   {fetchStatus.completedPages && fetchStatus.totalPages && (
                     <div style={{ marginTop: 8 }}>
                       <Text type="secondary">
-                        已完成 {fetchStatus.completedPages} / {fetchStatus.totalPages} 页
+                        已完成 {fetchStatus.completedPages} /{" "}
+                        {fetchStatus.totalPages} 页
                       </Text>
                     </div>
                   )}
@@ -106,7 +118,7 @@ export const FetchConfigWrapper: React.FC<FetchConfigWrapperProps> = ({
           )}
 
           {/* 拉取完成状态 */}
-          {fetchStatus?.status === 'completed' && (
+          {/* {fetchStatus?.status === 'completed' && (
             <Card 
               style={{ 
                 marginBottom: 16,
@@ -142,17 +154,18 @@ export const FetchConfigWrapper: React.FC<FetchConfigWrapperProps> = ({
                 }
                 showIcon
                 icon={<CheckCircleOutlined />}
+                closable
               />
             </Card>
-          )}
+          )} */}
 
           {/* 拉取失败状态 */}
-          {fetchStatus?.status === 'failed' && fetchStatus.error && (
-            <Card 
-              style={{ 
+          {fetchStatus?.status === "failed" && fetchStatus.error && (
+            <Card
+              style={{
                 marginBottom: 16,
                 borderRadius: 12,
-                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)'
+                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
               }}
             >
               <Alert
@@ -165,11 +178,8 @@ export const FetchConfigWrapper: React.FC<FetchConfigWrapperProps> = ({
           )}
 
           {/* 数据预览 */}
-          {fetchStatus?.status === 'completed' && sessionId ? (
-            <FetchedDataPreview 
-              sessionId={sessionId}
-              height={500}
-            />
+          {fetchStatus?.status === "completed" && sessionId ? (
+            <FetchedDataPreview sessionId={sessionId} height={500} />
           ) : (
             <DataPreview testResult={smokeTestResult || undefined} />
           )}

@@ -49,7 +49,7 @@ export const detectFieldType = (field: FieldInfo, stats?: FieldStats): FieldType
     'text': FieldType.STRING,
     'varchar': FieldType.STRING,
     'int': FieldType.INTEGER,
-    'double': FieldType.FLOAT,
+    'double': FieldType.DECIMAL,
     'timestamp': FieldType.DATETIME,
     'bool': FieldType.BOOLEAN,
   };
@@ -82,7 +82,7 @@ export const detectFieldType = (field: FieldInfo, stats?: FieldStats): FieldType
     
     // 检测是否为数字类型
     if (stats.min !== undefined && stats.max !== undefined) {
-      return FieldType.NUMBER;
+      return FieldType.DECIMAL;
     }
   }
   
@@ -96,7 +96,7 @@ export const detectFieldType = (field: FieldInfo, stats?: FieldStats): FieldType
   
   // 数字相关
   if (fieldName.includes('id') || fieldName.includes('count') || fieldName.includes('num') || fieldName.includes('age') || fieldName.includes('price')) {
-    return FieldType.NUMBER;
+    return FieldType.DECIMAL;
   }
   
   // 布尔相关
@@ -147,26 +147,12 @@ export const FILTER_SCHEMES: Record<FieldType, FilterScheme> = {
     defaultOperator: 'between',
     placeholder: '输入整数',
   },
-  [FieldType.NUMBER]: {
-    type: FieldType.NUMBER,
-    component: 'numberRange',
-    operators: ['eq', 'ne', 'gt', 'gte', 'lt', 'lte', 'between', 'is_null', 'is_not_null'],
-    defaultOperator: 'between',
-    placeholder: '输入数值',
-  },
   [FieldType.DECIMAL]: {
     type: FieldType.DECIMAL,
     component: 'numberRange',
     operators: ['eq', 'ne', 'gt', 'gte', 'lt', 'lte', 'between', 'is_null', 'is_not_null'],
     defaultOperator: 'between',
     placeholder: '输入小数',
-  },
-  [FieldType.FLOAT]: {
-    type: FieldType.FLOAT,
-    component: 'numberRange',
-    operators: ['eq', 'ne', 'gt', 'gte', 'lt', 'lte', 'between', 'is_null', 'is_not_null'],
-    defaultOperator: 'between',
-    placeholder: '输入浮点数',
   },
   
   // 日期类型
@@ -555,7 +541,7 @@ export const getTypeColor = (type: string): string => {
     'text': FieldType.STRING,
     'varchar': FieldType.STRING,
     'int': FieldType.INTEGER,
-    'double': FieldType.FLOAT,
+    'double': FieldType.DECIMAL,
     'timestamp': FieldType.DATETIME,
     'bool': FieldType.BOOLEAN,
   };
@@ -566,7 +552,7 @@ export const getTypeColor = (type: string): string => {
   
   // 模糊匹配
   if (lowerType.includes('int') || lowerType.includes('num')) {
-    return FIELD_TYPE_COLORS[FieldType.NUMBER];
+    return FIELD_TYPE_COLORS[FieldType.DECIMAL];
   }
   
   if (lowerType.includes('date') || lowerType.includes('time')) {
