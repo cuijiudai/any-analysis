@@ -31,7 +31,11 @@ export class SmokeTestDto {
   @Min(1)
   @Max(100)
   @IsOptional()
-  pageSize?: number = 10;
+  pageSize?: number;
+
+  @IsString()
+  @IsOptional()
+  dataPath?: string;
 }
 
 export interface SmokeTestResponse {

@@ -216,9 +216,9 @@ const WorkflowPage: React.FC = () => {
       completed.push(0);
     }
     
-    // 如果当前在数据分析步骤，说明字段标注已完成
+    // 只有当前在数据分析步骤时，字段标注才算完成
     if (currentStep === 'data') {
-      completed.push(1);
+      completed.push(0, 1);
     }
     
     return completed;

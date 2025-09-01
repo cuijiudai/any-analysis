@@ -54,6 +54,12 @@ export class FetchConfig {
   @Column({ name: 'page_size', type: 'int', default: 20 })
   pageSize: number;
 
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  name?: string;
+
+  @Column({ name: 'data_path', type: 'varchar', length: 500, nullable: true })
+  dataPath?: string;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

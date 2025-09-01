@@ -48,6 +48,14 @@ export class CreateFetchConfigDto {
   @Max(1000)
   @IsOptional()
   pageSize?: number = 20;
+
+  @IsString()
+  @IsOptional()
+  name?: string;
+
+  @IsString()
+  @IsOptional()
+  dataPath?: string;
 }
 
 export class ExecuteFetchDto {

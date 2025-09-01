@@ -11,6 +11,7 @@ export interface DataSession {
 export interface FetchConfig {
   id?: string;
   sessionId?: string;
+  name?: string; // 配置名称，选填
   apiUrl: string;
   headers: Record<string, string>;
   queryParams?: Record<string, string>;
@@ -18,6 +19,7 @@ export interface FetchConfig {
   pageField?: string; // 分页字段名，如 'page', 'pageNum' 等
   totalField?: string; // 总数字段名，如 'total', 'totalCount' 等，用于显示进度
   pageSize?: number;
+  dataPath?: string; // 数据路径，如 'data.list' 或 'result.items'
 }
 
 // 冒烟测试相关类型
@@ -26,6 +28,7 @@ export interface SmokeTestRequest {
   headers: Record<string, string>;
   queryParams?: Record<string, string>;
   pageSize?: number;
+  dataPath?: string;
 }
 
 export interface SmokeTestResponse {

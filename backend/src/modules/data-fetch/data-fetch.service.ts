@@ -65,7 +65,7 @@ export class DataFetchService {
       headers = {}, 
       queryParams = {},
       data, 
-      pageSize = 10
+      pageSize
     } = smokeTestDto;
     const startTime = Date.now();
 
@@ -112,18 +112,20 @@ export class DataFetchService {
       this.logger.log(`调试信息 - hasQueryParams: ${hasQueryParams}`);
       
       if (!paginationInfo.hasExistingPagination && !hasQueryParams) {
-        if (method === 'GET') {
-          // GET 请求：在查询参数中添加分页信息
-          requestParams[paginationInfo.pageField] = 1;
-          requestParams[paginationInfo.pageSizeField] = pageSize;
-        } else if (method === 'POST' && requestData) {
-          // POST 请求：在请求体中添加分页信息
-          if (typeof requestData === 'object' && requestData !== null) {
-            requestData = {
-              ...requestData,
-              [paginationInfo.pageField]: 1,
-              [paginationInfo.pageSizeField]: pageSize,
-            };
+        if (pageSize) {
+          if (method === 'GET') {
+            // GET 请求：在查询参数中添加分页信息
+            requestParams[paginationInfo.pageField] = 1;
+            requestParams[paginationInfo.pageSizeField] = pageSize;
+          } else if (method === 'POST' && requestData) {
+            // POST 请求：在请求体中添加分页信息
+            if (typeof requestData === 'object' && requestData !== null) {
+              requestData = {
+                ...requestData,
+                [paginationInfo.pageField]: 1,
+                [paginationInfo.pageSizeField]: pageSize,
+              };
+            }
           }
         }
       }
@@ -151,21 +153,21 @@ export class DataFetchService {
       let sampleData: any[] = [];
       const responseData = response.data;
 
-      // 尝试不同的数据结构
-      if (Array.isArray(responseData)) {
-        sampleData = responseData.slice(0, pageSize);
-      } else if (responseData.data && Array.isArray(responseData.data)) {
-        sampleData = responseData.data.slice(0, pageSize);
-      } else if (responseData.items && Array.isArray(responseData.items)) {
-        sampleData = responseData.items.slice(0, pageSize);
-      } else if (responseData.results && Array.isArray(responseData.results)) {
-        sampleData = responseData.results.slice(0, pageSize);
-      } else if (typeof responseData === 'object' && responseData !== null) {
-        // 如果返回的是单个对象，包装成数组
-        sampleData = [responseData];
+      // 如果指定了 dataPath，使用路径提取数据
+      if (smokeTestDto.dataPath) {
+        try {
+          const extractedData = this.extractDataByPath(responseData, smokeTestDto.dataPath);
+          if (Array.isArray(extractedData)) {
+            sampleData = pageSize ? extractedData.slice(0, pageSize) : extractedData;
+          } else {
+            sampleData = [extractedData];
+          }
+        } catch (error) {
+          this.logger.warn(`数据路径提取失败: ${error.message}，使用默认逻辑`);
+          sampleData = this.extractDataWithDefaultLogic(responseData, pageSize || 0);
+        }
       } else {
-        this.logger.warn('响应数据格式不识别，使用原始数据');
-        sampleData = [responseData];
+        sampleData = this.extractDataWithDefaultLogic(responseData, pageSize || 0);
       }
 
       // 分析数据结构
@@ -490,16 +492,21 @@ export class DataFetchService {
       let firstPageData: any[] = [];
       const responseData = firstPageResponse.data;
 
-      if (Array.isArray(responseData)) {
-        firstPageData = responseData;
-      } else if (responseData.data && Array.isArray(responseData.data)) {
-        firstPageData = responseData.data;
-      } else if (responseData.items && Array.isArray(responseData.items)) {
-        firstPageData = responseData.items;
-      } else if (responseData.results && Array.isArray(responseData.results)) {
-        firstPageData = responseData.results;
+      // 如果指定了 dataPath，使用路径提取数据
+      if (config.dataPath) {
+        try {
+          const extractedData = this.extractDataByPath(responseData, config.dataPath);
+          if (Array.isArray(extractedData)) {
+            firstPageData = extractedData;
+          } else {
+            firstPageData = [extractedData];
+          }
+        } catch (error) {
+          this.logger.warn(`数据路径提取失败: ${error.message}，使用默认逻辑`);
+          firstPageData = this.extractDataWithDefaultLogic(responseData, config.pageSize || 50);
+        }
       } else {
-        firstPageData = [responseData];
+        firstPageData = this.extractDataWithDefaultLogic(responseData, config.pageSize || 50);
       }
 
       if (firstPageData.length === 0) {
@@ -595,14 +602,21 @@ export class DataFetchService {
           let pageData: any[] = [];
           const pageResponseData = pageResponse.data;
 
-          if (Array.isArray(pageResponseData)) {
-            pageData = pageResponseData;
-          } else if (pageResponseData.data && Array.isArray(pageResponseData.data)) {
-            pageData = pageResponseData.data;
-          } else if (pageResponseData.items && Array.isArray(pageResponseData.items)) {
-            pageData = pageResponseData.items;
-          } else if (pageResponseData.results && Array.isArray(pageResponseData.results)) {
-            pageData = pageResponseData.results;
+          // 如果指定了 dataPath，使用路径提取数据
+          if (config.dataPath) {
+            try {
+              const extractedData = this.extractDataByPath(pageResponseData, config.dataPath);
+              if (Array.isArray(extractedData)) {
+                pageData = extractedData;
+              } else {
+                pageData = [extractedData];
+              }
+            } catch (error) {
+              this.logger.warn(`第 ${currentPage} 页数据路径提取失败: ${error.message}，使用默认逻辑`);
+              pageData = this.extractDataWithDefaultLogic(pageResponseData, config.pageSize || 50);
+            }
+          } else {
+            pageData = this.extractDataWithDefaultLogic(pageResponseData, config.pageSize || 50);
           }
 
           if (pageData.length === 0) {
@@ -929,6 +943,69 @@ export class DataFetchService {
     }
 
     return suggestedFields;
+  }
+
+  /**
+   * 根据路径提取数据
+   */
+  private extractDataByPath(data: any, path: string): any {
+    if (!path || !data) {
+      return data;
+    }
+
+    try {
+      // 处理复杂路径，如 [0].data.rank_list
+      const pathParts = path.split('.');
+      let current = data;
+
+      for (const part of pathParts) {
+        if (part.includes('[') && part.includes(']')) {
+          // 处理数组索引，如 [0] 或 items[0]
+          const match = part.match(/^([^\[]*)?\[(\d+)\]$/);
+          if (match) {
+            const [, key, index] = match;
+            if (key) {
+              current = current[key];
+            }
+            current = current[parseInt(index)];
+          } else {
+            current = current[part];
+          }
+        } else {
+          current = current[part];
+        }
+
+        if (current === undefined || current === null) {
+          throw new Error(`路径 '${path}' 中的 '${part}' 不存在`);
+        }
+      }
+
+      return current;
+    } catch (error) {
+      throw new Error(`无法按路径 '${path}' 提取数据: ${error.message}`);
+    }
+  }
+
+  /**
+   * 默认数据提取逻辑
+   */
+  private extractDataWithDefaultLogic(responseData: any, pageSize: number): any[] {
+    // 尝试不同的数据结构
+    if (Array.isArray(responseData)) {
+      return pageSize > 0 ? responseData.slice(0, pageSize) : responseData;
+    } else if (responseData.data && Array.isArray(responseData.data)) {
+      return pageSize > 0 ? responseData.data.slice(0, pageSize) : responseData.data;
+    } else if (responseData.items && Array.isArray(responseData.items)) {
+      return pageSize > 0 ? responseData.items.slice(0, pageSize) : responseData.items;
+    } else if (responseData.results && Array.isArray(responseData.results)) {
+      return pageSize > 0 ? responseData.results.slice(0, pageSize) : responseData.results;
+    } else if (typeof responseData === 'object' && responseData !== null) {
+      // 如果返回的是单个对象，包装成数组
+      return [responseData];
+    } else {
+      this.logger.warn('响应数据格式不识别，使用原始数据');
+      return [responseData];
+    }
   }
 
   /**

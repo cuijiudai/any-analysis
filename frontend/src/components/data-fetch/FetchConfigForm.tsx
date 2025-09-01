@@ -145,6 +145,8 @@ const FetchConfigForm: React.FC<FetchConfigFormProps> = ({
       pageField: allValues.pageField,
       totalField: allValues.totalField,
       pageSize: allValues.pageSize || 20,
+      name: allValues.name,
+      dataPath: allValues.dataPath,
     };
 
     // 处理请求头
@@ -316,6 +318,7 @@ const FetchConfigForm: React.FC<FetchConfigFormProps> = ({
       headers,
       queryParams,
       pageSize: values.pageSize || 20,
+      dataPath: values.dataPath,
     };
   };
 
@@ -348,6 +351,13 @@ const FetchConfigForm: React.FC<FetchConfigFormProps> = ({
         </div>
         
         <Form.Item
+          label="配置名称"
+          name="name"
+        >
+          <Input placeholder="可选，不填写将自动生成" />
+        </Form.Item>
+
+        <Form.Item
           label="API URL"
           name="apiUrl"
           rules={[
@@ -356,6 +366,20 @@ const FetchConfigForm: React.FC<FetchConfigFormProps> = ({
           ]}
         >
           <Input placeholder="https://api.example.com/data" />
+        </Form.Item>
+
+        <Form.Item
+          label={
+            <span>
+              数据路径
+              <Tooltip title="指定返回数据中数组的位置，支持复杂路径如 '[0].data.rank_list' 或 'result.items'，不填写则使用整个返回数据">
+                <InfoCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+              </Tooltip>
+            </span>
+          }
+          name="dataPath"
+        >
+          <Input placeholder="如: [0].data.rank_list 或 result.items，可不填" />
         </Form.Item>
 
         {/* 请求头配置 */}
@@ -567,6 +591,8 @@ const FetchConfigForm: React.FC<FetchConfigFormProps> = ({
                     pageField: values.pageField,
                     totalField: values.totalField,
                     pageSize: values.pageSize,
+                    name: values.name,
+                    dataPath: values.dataPath,
                   };
                   
                   // 处理请求头
@@ -612,6 +638,8 @@ const FetchConfigForm: React.FC<FetchConfigFormProps> = ({
                     pageField: values.pageField,
                     totalField: values.totalField,
                     pageSize: values.pageSize,
+                    name: values.name,
+                    dataPath: values.dataPath,
                   };
                   
                   // 处理请求头

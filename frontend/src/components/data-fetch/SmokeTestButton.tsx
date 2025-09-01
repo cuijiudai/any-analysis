@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
-import { Button, message } from 'antd';
-import { ExperimentOutlined } from '@ant-design/icons';
-import api from '../../services/api';
-import { SmokeTestRequest, SmokeTestResponse } from '../../types';
+import React, { useState } from "react";
+import { Button, message } from "antd";
+import { ExperimentOutlined } from "@ant-design/icons";
+import api from "../../services/api";
+import { SmokeTestRequest, SmokeTestResponse } from "../../types";
 
 interface SmokeTestButtonProps {
   apiUrl: string;
   headers: Record<string, string>;
   queryParams?: Record<string, string>;
-  pageSize?: number;
+  dataPath?: string;
   disabled?: boolean;
   onTestComplete?: (result: SmokeTestResponse) => void;
   style?: React.CSSProperties;
@@ -18,7 +18,7 @@ const SmokeTestButton: React.FC<SmokeTestButtonProps> = ({
   apiUrl,
   headers,
   queryParams = {},
-  pageSize = 10,
+  dataPath,
   disabled = false,
   onTestComplete,
   style,
@@ -27,7 +27,7 @@ const SmokeTestButton: React.FC<SmokeTestButtonProps> = ({
 
   const handleSmokeTest = async () => {
     if (!apiUrl.trim()) {
-      message.error('请输入API URL');
+      message.error("请输入API URL");
       return;
     }
 
@@ -38,11 +38,11 @@ const SmokeTestButton: React.FC<SmokeTestButtonProps> = ({
         apiUrl: apiUrl.trim(),
         headers,
         queryParams,
-        pageSize,
+        ...(dataPath && { dataPath }),
       };
 
-      const response = await api.post('/data-fetch/smoke-test', requestData);
-      
+      const response = await api.post("/data-fetch/smoke-test", requestData);
+
       if (response.data.success) {
         const result: SmokeTestResponse = {
           success: true,
@@ -52,7 +52,7 @@ const SmokeTestButton: React.FC<SmokeTestButtonProps> = ({
           dataStructure: response.data.data?.dataStructure,
         };
 
-        message.success('冒烟测试成功！');
+        message.success("冒烟测试成功！");
         onTestComplete?.(result);
       } else {
         const result: SmokeTestResponse = {
@@ -65,8 +65,9 @@ const SmokeTestButton: React.FC<SmokeTestButtonProps> = ({
         onTestComplete?.(result);
       }
     } catch (error: any) {
-      const errorMessage = error.response?.data?.error || error.message || '网络错误';
-      
+      const errorMessage =
+        error.response?.data?.error || error.message || "网络错误";
+
       const result: SmokeTestResponse = {
         success: false,
         data: [],
@@ -89,7 +90,7 @@ const SmokeTestButton: React.FC<SmokeTestButtonProps> = ({
       disabled={disabled || !apiUrl.trim()}
       style={style}
     >
-      {loading ? '测试中...' : '测试拉取'}
+      {loading ? "测试中..." : "测试拉取"}
     </Button>
   );
 };
