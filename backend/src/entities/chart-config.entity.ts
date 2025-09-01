@@ -13,19 +13,30 @@ export enum ChartType {
   LINE = 'line',
   BAR = 'bar',
   PIE = 'pie',
+  SCATTER = 'scatter',
 }
 
 export enum AggregationType {
   SUM = 'sum',
   AVG = 'avg',
   COUNT = 'count',
+  MIN = 'min',
+  MAX = 'max',
   NONE = 'none',
+}
+
+export enum XAxisAggregationType {
+  NONE = 'none',
+  GROUP = 'group',
+  DATE_GROUP = 'date_group',
+  RANGE = 'range',
 }
 
 export interface FilterCondition {
   field: string;
-  operator: 'eq' | 'ne' | 'gt' | 'lt' | 'in' | 'like';
-  value: any;
+  operator: 'eq' | 'ne' | 'gt' | 'lt' | 'gte' | 'lte' | 'in' | 'like' | 'between' | 'is_null' | 'is_not_null';
+  value?: any;
+  values?: any[];
 }
 
 @Entity('chart_configs')
@@ -53,6 +64,15 @@ export class ChartConfig {
   yAxis: string;
 
   @Column({
+    name: 'x_axis_aggregation',
+    type: 'enum',
+    enum: XAxisAggregationType,
+    default: XAxisAggregationType.NONE,
+    nullable: true,
+  })
+  xAxisAggregation: XAxisAggregationType | null;
+
+  @Column({
     type: 'enum',
     enum: AggregationType,
     default: AggregationType.NONE,
@@ -61,6 +81,9 @@ export class ChartConfig {
 
   @Column({ type: 'json', nullable: true })
   filters: FilterCondition[] | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  title: string | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

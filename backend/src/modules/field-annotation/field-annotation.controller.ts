@@ -1,20 +1,65 @@
 import { Controller, Get, Post, Delete, Param, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import { IsString, IsNotEmpty, IsOptional, IsArray, ValidateNested, IsEnum } from 'class-validator';
+import { Type } from 'class-transformer';
 import { FieldAnnotationService } from './field-annotation.service';
+import { FieldType } from '../../common/enums/field-type.enum';
+
+export class AnnotationItemDto {
+  @IsString()
+  @IsNotEmpty()
+  fieldName: string;
+
+  @IsString()
+  @IsNotEmpty()
+  label: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
+}
 
 export class SaveAnnotationDto {
+  @IsString()
+  @IsNotEmpty()
   sessionId: string;
+
+  @IsString()
+  @IsNotEmpty()
   fieldName: string;
+
+  @IsString()
+  @IsNotEmpty()
   label: string;
+
+  @IsOptional()
+  @IsString()
   description?: string;
 }
 
 export class BatchSaveAnnotationsDto {
+  @IsString()
+  @IsNotEmpty()
   sessionId: string;
-  annotations: Array<{
-    fieldName: string;
-    label: string;
-    description?: string;
-  }>;
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => AnnotationItemDto)
+  annotations: AnnotationItemDto[];
+}
+
+export class UpdateFieldTypeDto {
+  @IsString()
+  @IsNotEmpty()
+  sessionId: string;
+
+  @IsString()
+  @IsNotEmpty()
+  fieldName: string;
+
+  @IsEnum(FieldType, {
+    message: `字段类型必须是以下值之一: ${Object.values(FieldType).join(', ')}`
+  })
+  fieldType: FieldType;
 }
 
 @Controller('field-annotation')
@@ -105,6 +150,25 @@ export class FieldAnnotationController {
       success: true,
       annotations,
       count: annotations.length,
+    };
+  }
+
+  /**
+   * 更新字段类型
+   */
+  @Post('update-type')
+  @HttpCode(HttpStatus.OK)
+  async updateFieldType(@Body() dto: UpdateFieldTypeDto) {
+    const annotation = await this.fieldAnnotationService.updateFieldType(
+      dto.sessionId,
+      dto.fieldName,
+      dto.fieldType as string, // 转换为字符串传递给服务
+    );
+    
+    return {
+      success: true,
+      annotation,
+      message: '字段类型更新成功',
     };
   }
 

@@ -1,14 +1,47 @@
-import React from 'react';
-import { Card, Typography, Badge, Space, Button, Divider } from 'antd';
-import { 
-  BarChartOutlined, 
+import React, { useState, useEffect, useCallback } from "react";
+import {
+  Card,
+  Typography,
+  Badge,
+  Space,
+  Button,
+  Divider,
+  message,
+  Modal,
+} from "antd";
+import {
+  BarChartOutlined,
   TableOutlined,
   DownloadOutlined,
-  SettingOutlined
-} from '@ant-design/icons';
-import { DataTable } from './DataTable';
+  SettingOutlined,
+  PlusOutlined,
+  FolderOutlined,
+  ClearOutlined,
+  FullscreenOutlined,
+  FullscreenExitOutlined,
+} from "@ant-design/icons";
+import { DataTable, FilterCondition } from "./DataTable";
+import { ChartContainer, ChartData, ChartConfig } from "./ChartContainer";
+import { ChartConfigModal } from "./ChartConfigModal";
+import { ChartManagement } from "./ChartManagement";
+import { DataFilterPanel } from "./DataFilterPanel";
+import { FieldInfo } from "../../types";
+import api from "../../services/api";
 
 const { Title, Text } = Typography;
+
+interface SavedChart {
+  id: string;
+  sessionId: string;
+  name: string;
+  chartType: "line" | "bar" | "pie" | "scatter";
+  xAxis: string;
+  yAxis: string;
+  aggregation?: string;
+  title?: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 interface DataAnalysisWrapperProps {
   sessionId: string;
@@ -19,31 +52,180 @@ interface DataAnalysisWrapperProps {
 export const DataAnalysisWrapper: React.FC<DataAnalysisWrapperProps> = ({
   sessionId,
   onBack,
-  onSettings
+  onSettings,
 }) => {
+  const [activeTab, setActiveTab] = useState<"table" | "management">("table");
+  const [chartViewVisible, setChartViewVisible] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [chartConfigVisible, setChartConfigVisible] = useState(false);
+  const [fields, setFields] = useState<FieldInfo[]>([]);
+  const [currentChart, setCurrentChart] = useState<ChartData | null>(null);
+  const [currentChartConfig, setCurrentChartConfig] =
+    useState<ChartConfig | null>(null);
+  const [filteredData, setFilteredData] = useState<any[]>([]);
+  const [totalFilteredCount, setTotalFilteredCount] = useState(0);
+  const [selectedRows, setSelectedRows] = useState<any[]>([]);
+  const [filters, setFilters] = useState<FilterCondition[]>([]);
+  const [tableLoading, setTableLoading] = useState(false);
+
+  const [chartLoading, setChartLoading] = useState(false);
+
+  const [editingChart, setEditingChart] = useState<SavedChart | null>(null);
+
+  useEffect(() => {
+    if (sessionId) {
+      loadFields();
+      loadSavedCharts();
+    }
+  }, [sessionId]);
+
+  const loadFields = async () => {
+    try {
+      // 从字段标注API获取字段信息
+      const response = await api.get(`/field-annotation/fields/${sessionId}`);
+      if (response.data.success) {
+        const fieldsData = response.data.fields || [];
+        const formattedFields: FieldInfo[] = fieldsData.map((field: any) => ({
+          name: field.name,
+          label: field.annotation?.label || field.suggestedLabel || field.name,
+          type: field.type,
+          suggestedLabel: field.suggestedLabel || field.name,
+          sampleValues: field.sampleValues || [],
+          annotation: field.annotation,
+        }));
+        setFields(formattedFields);
+      } else {
+        throw new Error(response.data.error || "获取字段信息失败");
+      }
+    } catch (error) {
+      console.error("Failed to load fields:", error);
+      message.error("获取字段信息失败");
+      // 如果API失败，使用空数组而不是模拟数据
+      setFields([]);
+    }
+  };
+
+  const loadSavedCharts = async () => {
+    try {
+      const response = await api.get(`/data-analysis/chart/saved/${sessionId}`);
+      if (response.data.success) {
+        // Charts loaded successfully
+      }
+    } catch (error) {
+      console.error("Failed to load saved charts:", error);
+    }
+  };
+
+  const handleGenerateChart = async (config: ChartConfig) => {
+    // 检查是否有筛选条件或数据
+    if (totalFilteredCount === 0) {
+      message.warning("请先在表格视图中筛选数据，然后再创建图表");
+      setActiveTab("table");
+      return;
+    }
+
+    setChartLoading(true);
+    try {
+      // 传递筛选条件而不是当前页数据
+      const chartConfig = {
+        ...config,
+        filters: filters.length > 0 ? filters : undefined,
+      };
+
+      const response = await api.post(
+        "/data-analysis/chart/generate",
+        chartConfig
+      );
+      if (response.data.success) {
+        setCurrentChart(response.data.chartData);
+        setCurrentChartConfig(config);
+        setChartViewVisible(true);
+        message.success(`图表生成成功！基于 ${totalFilteredCount} 条筛选数据`);
+      }
+    } catch (error) {
+      console.error("Failed to generate chart:", error);
+      message.error("图表生成失败");
+    } finally {
+      setChartLoading(false);
+    }
+  };
+
+  const handleSaveChart = async (config: ChartConfig & { name: string }) => {
+    try {
+      const response = await api.post("/data-analysis/chart/save", config);
+      if (response.data.success) {
+        message.success("图表配置已保存");
+      }
+    } catch (error) {
+      console.error("Failed to save chart:", error);
+      message.error("保存图表配置失败");
+    }
+  };
+
+  const handleExportData = async () => {
+    try {
+      const response = await api.post("/data-analysis/export", {
+        sessionId,
+        filters: filters.length > 0 ? filters : undefined,
+      });
+      if (response.data.success) {
+        // 创建下载链接
+        const dataStr = JSON.stringify(response.data.data, null, 2);
+        const dataBlob = new Blob([dataStr], { type: "application/json" });
+        const url = URL.createObjectURL(dataBlob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `data_export_${Date.now()}.json`;
+        link.click();
+        URL.revokeObjectURL(url);
+        message.success("数据导出成功");
+      }
+    } catch (error) {
+      console.error("Failed to export data:", error);
+      message.error("数据导出失败");
+    }
+  };
+
+  // 处理数据变化
+  const handleDataChange = useCallback((data: any[], total?: number) => {
+    setFilteredData(data);
+    if (total !== undefined) {
+      setTotalFilteredCount(total);
+    }
+    setTableLoading(false);
+  }, []);
+
+  // 应用筛选条件
+  const handleApplyFilters = () => {
+    setTableLoading(true);
+    // DataTable 组件会通过 useEffect 监听 filters 变化并重新加载数据
+  };
+
   return (
     <div className="data-analysis-wrapper">
       <Card
         style={{
           borderRadius: 12,
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)',
-          marginBottom: 16
+          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
+          marginBottom: 16,
         }}
       >
         <div className="analysis-header" style={{ marginBottom: 24 }}>
-          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
-            <Badge 
-              count="3" 
-              style={{ 
-                backgroundColor: '#722ed1',
+          <div
+            style={{ display: "flex", alignItems: "center", marginBottom: 8 }}
+          >
+            <Badge
+              count="3"
+              style={{
+                backgroundColor: "#722ed1",
                 marginRight: 12,
                 fontSize: 12,
                 minWidth: 20,
                 height: 20,
-                lineHeight: '20px'
+                lineHeight: "20px",
               }}
             />
-            <Title level={3} style={{ margin: 0, color: '#722ed1' }}>
+            <Title level={3} style={{ margin: 0, color: "#722ed1" }}>
               数据分析
             </Title>
           </div>
@@ -56,77 +238,152 @@ export const DataAnalysisWrapper: React.FC<DataAnalysisWrapperProps> = ({
         {/* 操作按钮 */}
         <div className="action-buttons" style={{ marginBottom: 24 }}>
           <Space size="middle">
-            <Button 
-              type="dashed" 
+            <Button
+              type={activeTab === "table" ? "primary" : "dashed"}
               icon={<TableOutlined />}
-              style={{ borderColor: '#722ed1', color: '#722ed1' }}
+              onClick={() => setActiveTab("table")}
+              style={
+                activeTab !== "table"
+                  ? { borderColor: "#722ed1", color: "#722ed1" }
+                  : {}
+              }
             >
               表格视图
             </Button>
-            <Button 
-              type="dashed" 
-              icon={<BarChartOutlined />}
-              style={{ borderColor: '#722ed1', color: '#722ed1' }}
+
+            <Button
+              type={activeTab === "management" ? "primary" : "dashed"}
+              icon={<FolderOutlined />}
+              onClick={() => setActiveTab("management")}
+              style={
+                activeTab !== "management"
+                  ? { borderColor: "#722ed1", color: "#722ed1" }
+                  : {}
+              }
             >
-              图表视图
+              图表管理
             </Button>
-            <Button 
-              type="primary" 
-              ghost 
-              icon={<DownloadOutlined />}
+            <Button
+              type="primary"
+              ghost
+              icon={<PlusOutlined />}
+              onClick={() => {
+                if (totalFilteredCount === 0) {
+                  message.warning("请先在表格视图中筛选数据，然后再创建图表");
+                  setActiveTab("table");
+                } else {
+                  setChartConfigVisible(true);
+                }
+              }}
             >
-              导出数据
+              创建图表{" "}
+              {totalFilteredCount > 0 && `(${totalFilteredCount}条数据)`}
             </Button>
+
             {onSettings && (
-              <Button 
-                icon={<SettingOutlined />}
-                onClick={onSettings}
-              >
+              <Button icon={<SettingOutlined />} onClick={onSettings}>
                 分析设置
               </Button>
             )}
           </Space>
         </div>
 
-        <Divider style={{ margin: '24px 0' }} />
+        <Divider style={{ margin: "24px 0" }} />
       </Card>
 
-      {/* 数据表格 */}
-      <DataTable 
+      {/* 主要内容区域 */}
+      {activeTab === "table" ? (
+        <>
+          {/* 筛选面板 */}
+          <DataFilterPanel
+            sessionId={sessionId}
+            fields={fields}
+            filters={filters}
+            onFiltersChange={setFilters}
+            onApplyFilters={handleApplyFilters}
+            loading={tableLoading}
+          />
+
+          {/* 数据表格 */}
+          <DataTable
+            sessionId={sessionId}
+            height={500}
+            showToolbar={true}
+            showPagination={true}
+            defaultPageSize={20}
+            filters={filters}
+            onDataChange={handleDataChange}
+            onRowSelect={setSelectedRows}
+            onFiltersChange={setFilters}
+          />
+        </>
+      ) : (
+        <ChartManagement
+          sessionId={sessionId}
+          onLoadChart={(chartData, config) => {
+            setCurrentChart(chartData);
+            setCurrentChartConfig(config);
+            setChartViewVisible(true);
+          }}
+          onEditChart={chart => {
+            setEditingChart(chart);
+            setChartConfigVisible(true);
+          }}
+        />
+      )}
+
+      {/* 图表配置模态框 */}
+      <ChartConfigModal
+        visible={chartConfigVisible}
         sessionId={sessionId}
-        height={600}
-        showToolbar={true}
-        showPagination={true}
-        defaultPageSize={20}
+        fields={fields}
+        filteredData={filteredData}
+        totalCount={totalFilteredCount}
+        editingChart={editingChart}
+        onClose={() => {
+          setChartConfigVisible(false);
+          setEditingChart(null);
+        }}
+        onGenerate={handleGenerateChart}
+        onSave={handleSaveChart}
       />
 
-      {/* 底部操作按钮 */}
-      <Card 
-        style={{ 
-          marginTop: 16,
-          borderRadius: 12,
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)'
+      {/* 图表查看模态框 */}
+      <Modal
+        title={currentChartConfig?.title || "图表查看"}
+        open={chartViewVisible}
+        onCancel={() => {
+          setChartViewVisible(false);
+          setIsFullscreen(false);
         }}
+        width={isFullscreen ? "100vw" : "90vw"}
+        style={isFullscreen ? { top: 0, maxWidth: "none", margin: 0, padding: 0 } : { top: 20 }}
+        bodyStyle={isFullscreen ? { padding: 0, height: "100vh" } : {}}
+        footer={null}
       >
-        <div style={{ 
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
-          <div>
-            {onBack && (
-              <Button onClick={onBack} size="large">
-                返回字段标注
-              </Button>
-            )}
-          </div>
-          <Space>
-            <Text type="secondary">
-              数据分析完成，可以继续探索数据或创建新的分析会话
-            </Text>
-          </Space>
+        <div style={{ position: 'relative' }}>
+          <Button
+            type="text"
+            icon={isFullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
+            onClick={() => setIsFullscreen(!isFullscreen)}
+            style={{
+              position: 'absolute',
+              top: 8,
+              right: 8,
+              zIndex: 1000,
+              backgroundColor: 'rgba(255, 255, 255, 0.8)',
+              border: '1px solid #d9d9d9'
+            }}
+          />
+          <ChartContainer
+            chartData={currentChart || undefined}
+            config={currentChartConfig || undefined}
+            loading={chartLoading}
+            height={isFullscreen ? window.innerHeight - 100 : Math.max(600, window.innerHeight - 200)}
+            showToolbar={false}
+          />
         </div>
-      </Card>
+      </Modal>
     </div>
   );
 };

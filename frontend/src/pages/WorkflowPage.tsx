@@ -216,9 +216,8 @@ const WorkflowPage: React.FC = () => {
       completed.push(0);
     }
     
-    // 这里可以根据实际的字段标注状态来判断第二步是否完成
-    // 暂时简化处理，如果当前在数据分析步骤，说明字段标注已完成
-    if (currentStep === 'data' && fetchStatus?.status === 'completed') {
+    // 如果当前在数据分析步骤，说明字段标注已完成
+    if (currentStep === 'data') {
       completed.push(1);
     }
     
@@ -278,8 +277,8 @@ const WorkflowPage: React.FC = () => {
   const handleAnnotationComplete = () => {
     message.success('字段标注完成！');
     setCurrentStep('data');
-    // 移除URL参数
-    navigate(`/workflow/${sessionId}`, { replace: true });
+    // 导航到数据分析步骤
+    navigate(`/workflow/${sessionId}?step=data`, { replace: true });
   };
 
   // 步骤切换函数
@@ -287,10 +286,14 @@ const WorkflowPage: React.FC = () => {
     const stepMap = ['config', 'annotation', 'data'];
     const step = stepMap[stepIndex];
     setCurrentStep(step);
-    if (step === 'annotation') {
-      navigate(`/workflow/${sessionId}?step=annotation`);
-    } else {
+    
+    // 为每个步骤设置对应的URL参数
+    if (step === 'config') {
       navigate(`/workflow/${sessionId}`, { replace: true });
+    } else if (step === 'annotation') {
+      navigate(`/workflow/${sessionId}?step=annotation`, { replace: true });
+    } else if (step === 'data') {
+      navigate(`/workflow/${sessionId}?step=data`, { replace: true });
     }
   };
 
@@ -329,46 +332,13 @@ const WorkflowPage: React.FC = () => {
             icon={<ArrowLeftOutlined />}
             onClick={handleGoBack}
           >
-            返回列表
+           
           </Button>
           <Title level={3} style={{ margin: 0 }}>
             {session.name}
           </Title>
         </Space>
-        <Space>
-          <Button 
-            icon={<ReloadOutlined />}
-            onClick={handleRefresh}
-            loading={refreshing}
-          >
-            刷新
-          </Button>
-          {fetchStatus?.status === 'completed' && (
-            <Space>
-              <Button 
-                type={currentStep === 'config' ? 'primary' : 'default'}
-                icon={<SettingOutlined />}
-                onClick={() => handleStepChange(0)}
-              >
-                数据配置
-              </Button>
-              <Button 
-                type={currentStep === 'annotation' ? 'primary' : 'default'}
-                icon={<TagsOutlined />}
-                onClick={() => handleStepChange(1)}
-              >
-                字段标注
-              </Button>
-              <Button 
-                type={currentStep === 'data' ? 'primary' : 'default'}
-                icon={<RocketOutlined />}
-                onClick={() => handleStepChange(2)}
-              >
-                数据分析
-              </Button>
-            </Space>
-          )}
-        </Space>
+        
       </div>
 
       {/* 步骤条 */}
@@ -393,27 +363,22 @@ const WorkflowPage: React.FC = () => {
       {dataStats && (
         <Card title="数据概览" style={{ marginBottom: 16 }}>
           <Row gutter={16}>
-            <Col span={6}>
+            <Col span={8}>
               <Statistic 
                 title="总记录数" 
                 value={dataStats.totalRecords} 
                 suffix="条"
               />
             </Col>
-            <Col span={6}>
+            <Col span={8}>
               <Statistic 
                 title="字段数" 
                 value={dataStats.totalFields} 
                 suffix="个"
               />
             </Col>
-            <Col span={6}>
-              <Statistic 
-                title="数据大小" 
-                value={dataStats.tableSize} 
-              />
-            </Col>
-            <Col span={6}>
+           
+            <Col span={8}>
               <Statistic 
                 title="创建时间" 
                 value={new Date(dataStats.created).toLocaleString()} 
@@ -449,11 +414,31 @@ const WorkflowPage: React.FC = () => {
       )}
 
       {/* 数据分析 */}
-      {currentStep === 'data' && fetchStatus?.status === 'completed' && sessionId && (
-        <DataAnalysisWrapper 
-          sessionId={sessionId}
-          onBack={() => handleStepChange(1)}
-        />
+      {currentStep === 'data' && sessionId && (
+        <>
+          {fetchStatus?.status === 'completed' ? (
+            <DataAnalysisWrapper 
+              sessionId={sessionId}
+              onBack={() => handleStepChange(1)}
+            />
+          ) : (
+            <Card>
+              <div style={{ textAlign: 'center', padding: '40px' }}>
+                <Text type="secondary">数据拉取尚未完成</Text>
+                <br />
+                <Text type="secondary">请先完成数据拉取后再进行数据分析</Text>
+                <br />
+                <Button 
+                  type="primary" 
+                  onClick={() => handleStepChange(0)}
+                  style={{ marginTop: 16 }}
+                >
+                  返回数据配置
+                </Button>
+              </div>
+            </Card>
+          )}
+        </>
       )}
 
       {/* 等待状态 */}

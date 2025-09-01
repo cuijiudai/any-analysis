@@ -4,6 +4,7 @@ import { Repository, DataSource, SelectQueryBuilder } from 'typeorm';
 import { DataSession } from '../../entities/data-session.entity';
 import { DataTableSchema } from '../../entities/data-table-schema.entity';
 import { FieldAnnotation } from '../../entities/field-annotation.entity';
+import { AggregationType } from '../../entities/chart-config.entity';
 
 export interface FilterCondition {
   field: string;
@@ -39,13 +40,46 @@ export interface QueryResult {
 
 export interface AggregationResult {
   field: string;
-  aggregation: 'sum' | 'avg' | 'count' | 'min' | 'max';
+  aggregation: AggregationType;
   value: number;
   groupBy?: string;
   groups?: Array<{
     groupValue: any;
     aggregatedValue: number;
   }>;
+}
+
+export interface ChartDataPoint {
+  x: any;
+  y: number;
+  label?: string;
+  category?: string;
+}
+
+export interface ChartData {
+  type: 'line' | 'bar' | 'pie' | 'scatter';
+  title: string;
+  xAxisLabel: string;
+  yAxisLabel: string;
+  data: ChartDataPoint[];
+  categories?: string[];
+  aggregation?: AggregationType;
+  totalRecords: number;
+}
+
+export interface ChartConfigDto {
+  sessionId: string;
+  chartType: 'line' | 'bar' | 'pie' | 'scatter';
+  xAxis: string;
+  yAxis: string;
+  xAxisAggregation?: 'none' | 'group' | 'date_group' | 'range';
+  aggregation?: AggregationType;
+  groupBy?: string;
+  filters?: FilterCondition[];
+  title?: string;
+  colorScheme?: string[];
+  showLegend?: boolean;
+  showDataLabels?: boolean;
 }
 
 @Injectable()
@@ -167,7 +201,7 @@ export class DataAnalysisService {
   async aggregateData(
     sessionId: string,
     field: string,
-    aggregation: 'sum' | 'avg' | 'count' | 'min' | 'max',
+    aggregation: AggregationType,
     groupBy?: string,
     filters?: FilterCondition[]
   ): Promise<AggregationResult> {
@@ -455,6 +489,253 @@ export class DataAnalysisService {
 
     const result = await queryBuilder.getRawOne();
     return parseInt(result?.count || 0);
+  }
+
+  /**
+   * 生成图表数据
+   */
+  async generateChartData(config: ChartConfigDto): Promise<ChartData> {
+    const { sessionId, chartType, xAxis, yAxis, aggregation, filters, title } = config;
+    
+    // 验证会话和表结构
+    const schema = await this.getSessionSchema(sessionId);
+    const tableName = schema.tableName;
+    const fieldDefinitions = schema.fieldDefinitions as Record<string, any>;
+
+    // 验证字段存在
+    if (!fieldDefinitions[xAxis]) {
+      throw new BadRequestException(`X轴字段 ${xAxis} 不存在`);
+    }
+    if (!fieldDefinitions[yAxis]) {
+      throw new BadRequestException(`Y轴字段 ${yAxis} 不存在`);
+    }
+
+    // 获取字段标注信息
+    const annotations = await this.annotationRepository.find({
+      where: { sessionId },
+    });
+    const annotationMap = new Map<string, FieldAnnotation>();
+    annotations.forEach(annotation => {
+      annotationMap.set(annotation.fieldName, annotation);
+    });
+
+    const xAxisLabel = annotationMap.get(xAxis)?.label || xAxis;
+    const yAxisLabel = annotationMap.get(yAxis)?.label || yAxis;
+
+    let queryBuilder = this.dataSource
+      .createQueryBuilder()
+      .from(tableName, 'data');
+
+    // 根据图表类型和聚合方式构建查询
+    if (chartType === 'pie') {
+      // 饼图：按X轴分组，对Y轴进行聚合
+      const aggFunction = this.getAggregationFunction(aggregation || 'count', yAxis);
+      queryBuilder
+        .select(`data.${xAxis}`, 'x')
+        .addSelect(aggFunction, 'y')
+        .groupBy(`data.${xAxis}`)
+        .orderBy('y', 'DESC');
+    } else if (aggregation) {
+      // 其他图表类型：按X轴分组，对Y轴进行聚合
+      const aggFunction = this.getAggregationFunction(aggregation, yAxis);
+      queryBuilder
+        .select(`data.${xAxis}`, 'x')
+        .addSelect(aggFunction, 'y')
+        .groupBy(`data.${xAxis}`)
+        .orderBy(`data.${xAxis}`, 'ASC');
+    } else {
+      // 散点图或无聚合：直接选择X和Y轴数据
+      queryBuilder
+        .select(`data.${xAxis}`, 'x')
+        .addSelect(`data.${yAxis}`, 'y')
+        .orderBy(`data.${xAxis}`, 'ASC');
+    }
+
+    // 应用筛选条件
+    if (filters && filters.length > 0) {
+      this.applyFilters(queryBuilder, filters, fieldDefinitions);
+    }
+
+    // 限制数据点数量（避免图表过于复杂）
+    if (chartType === 'scatter' || !aggregation) {
+      queryBuilder.limit(1000);
+    }
+
+    // 执行查询
+    const rawData = await queryBuilder.getRawMany();
+    
+    // 获取总记录数
+    const totalRecords = await this.getFilteredCount(tableName, filters, fieldDefinitions);
+
+    // 转换数据格式
+    const data: ChartDataPoint[] = rawData.map(row => ({
+      x: row.x,
+      y: parseFloat(row.y) || 0,
+      label: String(row.x),
+    }));
+
+    // 对于饼图，计算百分比
+    if (chartType === 'pie') {
+      const total = data.reduce((sum, point) => sum + point.y, 0);
+      data.forEach(point => {
+        point.category = `${point.label} (${((point.y / total) * 100).toFixed(1)}%)`;
+      });
+    }
+
+    return {
+      type: chartType,
+      title: title || `${xAxisLabel} vs ${yAxisLabel}`,
+      xAxisLabel,
+      yAxisLabel,
+      data,
+      aggregation,
+      totalRecords,
+    };
+  }
+
+  /**
+   * 获取图表建议
+   */
+  async getChartSuggestions(sessionId: string): Promise<Array<{
+    chartType: 'line' | 'bar' | 'pie' | 'scatter';
+    xAxis: string;
+    yAxis: string;
+    aggregation?: AggregationType;
+    title: string;
+    description: string;
+    suitability: number; // 0-100 适合度评分
+  }>> {
+    const schema = await this.getSessionSchema(sessionId);
+    const fieldDefinitions = schema.fieldDefinitions as Record<string, any>;
+    
+    // 获取字段标注
+    const annotations = await this.annotationRepository.find({
+      where: { sessionId },
+    });
+    const annotationMap = new Map<string, FieldAnnotation>();
+    annotations.forEach(annotation => {
+      annotationMap.set(annotation.fieldName, annotation);
+    });
+
+    const suggestions: any[] = [];
+    const fields = Object.keys(fieldDefinitions);
+    
+    // 分类字段类型
+    const numericFields = fields.filter(field => 
+      ['integer', 'number', 'decimal', 'float'].includes(fieldDefinitions[field]?.type)
+    );
+    const categoricalFields = fields.filter(field => 
+      ['string', 'text'].includes(fieldDefinitions[field]?.type)
+    );
+    const dateFields = fields.filter(field => 
+      ['date', 'datetime', 'timestamp'].includes(fieldDefinitions[field]?.type)
+    );
+
+    // 生成建议
+    // 1. 数值字段的分布（柱状图）
+    numericFields.forEach(field => {
+      const label = annotationMap.get(field)?.label || field;
+      suggestions.push({
+        chartType: 'bar' as const,
+        xAxis: field,
+        yAxis: field,
+        aggregation: 'count' as const,
+        title: `${label}分布`,
+        description: `显示${label}的数值分布情况`,
+        suitability: 85,
+      });
+    });
+
+    // 2. 分类字段的统计（饼图）
+    categoricalFields.forEach(catField => {
+      const label = annotationMap.get(catField)?.label || catField;
+      suggestions.push({
+        chartType: 'pie' as const,
+        xAxis: catField,
+        yAxis: catField,
+        aggregation: 'count' as const,
+        title: `${label}占比`,
+        description: `显示不同${label}的占比情况`,
+        suitability: 80,
+      });
+    });
+
+    // 3. 时间序列（折线图）
+    if (dateFields.length > 0 && numericFields.length > 0) {
+      dateFields.forEach(dateField => {
+        numericFields.forEach(numField => {
+          const dateLabel = annotationMap.get(dateField)?.label || dateField;
+          const numLabel = annotationMap.get(numField)?.label || numField;
+          suggestions.push({
+            chartType: 'line' as const,
+            xAxis: dateField,
+            yAxis: numField,
+            aggregation: 'avg' as const,
+            title: `${numLabel}趋势`,
+            description: `显示${numLabel}随${dateLabel}的变化趋势`,
+            suitability: 90,
+          });
+        });
+      });
+    }
+
+    // 4. 数值字段相关性（散点图）
+    for (let i = 0; i < numericFields.length; i++) {
+      for (let j = i + 1; j < numericFields.length; j++) {
+        const field1 = numericFields[i];
+        const field2 = numericFields[j];
+        const label1 = annotationMap.get(field1)?.label || field1;
+        const label2 = annotationMap.get(field2)?.label || field2;
+        
+        suggestions.push({
+          chartType: 'scatter' as const,
+          xAxis: field1,
+          yAxis: field2,
+          title: `${label1} vs ${label2}`,
+          description: `分析${label1}和${label2}之间的相关性`,
+          suitability: 75,
+        });
+      }
+    }
+
+    // 5. 分类字段与数值字段的关系（柱状图）
+    categoricalFields.forEach(catField => {
+      numericFields.forEach(numField => {
+        const catLabel = annotationMap.get(catField)?.label || catField;
+        const numLabel = annotationMap.get(numField)?.label || numField;
+        
+        suggestions.push({
+          chartType: 'bar' as const,
+          xAxis: catField,
+          yAxis: numField,
+          aggregation: 'avg' as const,
+          title: `不同${catLabel}的${numLabel}对比`,
+          description: `比较不同${catLabel}的${numLabel}平均值`,
+          suitability: 85,
+        });
+      });
+    });
+
+    // 按适合度排序并返回前10个建议
+    return suggestions
+      .sort((a, b) => b.suitability - a.suitability)
+      .slice(0, 10);
+  }
+
+  /**
+   * 获取聚合函数SQL
+   */
+  private getAggregationFunction(aggregation: AggregationType | string, field: string): string {
+    const aggregationMap = {
+      [AggregationType.SUM]: `SUM(data.${field})`,
+      [AggregationType.AVG]: `AVG(data.${field})`,
+      [AggregationType.COUNT]: `COUNT(data.${field})`,
+      [AggregationType.MIN]: `MIN(data.${field})`,
+      [AggregationType.MAX]: `MAX(data.${field})`,
+      [AggregationType.NONE]: `data.${field}`,
+    };
+
+    return aggregationMap[aggregation] || `COUNT(data.${field})`;
   }
 
   /**

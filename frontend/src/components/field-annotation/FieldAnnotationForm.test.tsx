@@ -89,15 +89,15 @@ describe('FieldAnnotationForm', () => {
 
     // Wait for fields to load
     await waitFor(() => {
-      expect(screen.getByText('共 2 个字段需要标注')).toBeInTheDocument();
+      expect(screen.getByText('字段标注是可选的，可以跳过直接进入数据分析')).toBeInTheDocument();
     });
   });
 
-  it('displays progress correctly', async () => {
+  it('displays annotation status correctly', async () => {
     render(<FieldAnnotationForm {...mockProps} />);
 
     await waitFor(() => {
-      expect(screen.getByText('(1/2 个字段已标注)')).toBeInTheDocument();
+      expect(screen.getByText('1/2')).toBeInTheDocument();
     });
   });
 
@@ -168,85 +168,24 @@ describe('FieldAnnotationForm', () => {
     });
   });
 
-  it('disables complete button when progress is not 100%', async () => {
+  it('always enables complete button since annotation is optional', async () => {
     render(<FieldAnnotationForm {...mockProps} />);
 
     await waitFor(() => {
-      const completeButton = screen.getByText('完成标注，进入下一步');
-      expect(completeButton).toBeDisabled();
-    });
-  });
-
-  it('enables complete button when progress is 100%', async () => {
-    const fullProgress = {
-      ...mockProgress,
-      annotatedFields: 2,
-      progress: 100,
-      missingAnnotations: [],
-    };
-
-    mockedApi.get.mockImplementation((url) => {
-      if (url.includes('/progress/')) {
-        return Promise.resolve({ data: fullProgress });
-      }
-      if (url.includes('/fields/')) {
-        return Promise.resolve({ data: { fields: mockFields } });
-      }
-      if (url.includes('/validate/')) {
-        return Promise.resolve({
-          data: {
-            isComplete: true,
-            missingFields: [],
-            errors: [],
-          },
-        });
-      }
-      return Promise.reject(new Error('Unknown endpoint'));
-    });
-
-    render(<FieldAnnotationForm {...mockProps} />);
-
-    await waitFor(() => {
-      const completeButton = screen.getByText('完成标注，进入下一步');
+      const completeButton = screen.getByText('完成标注，进入数据分析');
       expect(completeButton).not.toBeDisabled();
     });
   });
 
   it('handles completion flow', async () => {
-    const fullProgress = {
-      ...mockProgress,
-      annotatedFields: 2,
-      progress: 100,
-      missingAnnotations: [],
-    };
-
-    mockedApi.get.mockImplementation((url) => {
-      if (url.includes('/progress/')) {
-        return Promise.resolve({ data: fullProgress });
-      }
-      if (url.includes('/fields/')) {
-        return Promise.resolve({ data: { fields: mockFields } });
-      }
-      if (url.includes('/validate/')) {
-        return Promise.resolve({
-          data: {
-            isComplete: true,
-            missingFields: [],
-            errors: [],
-          },
-        });
-      }
-      return Promise.reject(new Error('Unknown endpoint'));
-    });
-
     render(<FieldAnnotationForm {...mockProps} />);
 
     await waitFor(() => {
-      const completeButton = screen.getByText('完成标注，进入下一步');
+      const completeButton = screen.getByText('完成标注，进入数据分析');
       expect(completeButton).not.toBeDisabled();
     });
 
-    const completeButton = screen.getByText('完成标注，进入下一步');
+    const completeButton = screen.getByText('完成标注，进入数据分析');
     fireEvent.click(completeButton);
 
     await waitFor(() => {

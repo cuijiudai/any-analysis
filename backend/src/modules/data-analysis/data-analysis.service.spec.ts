@@ -5,6 +5,7 @@ import { DataAnalysisService, FilterCondition } from './data-analysis.service';
 import { DataSession } from '../../entities/data-session.entity';
 import { DataTableSchema } from '../../entities/data-table-schema.entity';
 import { FieldAnnotation } from '../../entities/field-annotation.entity';
+import { AggregationType } from '../../entities/chart-config.entity';
 
 describe('DataAnalysisService', () => {
   let service: DataAnalysisService;
@@ -218,7 +219,7 @@ describe('DataAnalysisService', () => {
     it('should perform sum aggregation', async () => {
       queryBuilder.getRawMany.mockResolvedValue([{ aggregatedValue: '83' }]);
 
-      const result = await service.aggregateData('test-session-id', 'age', 'sum');
+      const result = await service.aggregateData('test-session-id', 'age', AggregationType.SUM);
 
       expect(result).toEqual({
         field: 'age',
@@ -236,7 +237,7 @@ describe('DataAnalysisService', () => {
       ];
       queryBuilder.getRawMany.mockResolvedValue(groupedResults);
 
-      const result = await service.aggregateData('test-session-id', 'age', 'avg', 'created_at');
+      const result = await service.aggregateData('test-session-id', 'age', AggregationType.AVG, 'created_at');
 
       expect(result).toEqual({
         field: 'age',
@@ -256,7 +257,7 @@ describe('DataAnalysisService', () => {
 
     it('should throw error for invalid field', async () => {
       await expect(
-        service.aggregateData('test-session-id', 'invalid_field', 'sum')
+        service.aggregateData('test-session-id', 'invalid_field', AggregationType.SUM)
       ).rejects.toThrow('字段 invalid_field 不存在');
     });
   });

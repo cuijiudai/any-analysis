@@ -99,8 +99,8 @@ export const FieldAnnotationForm: React.FC<FieldAnnotationFormProps> = ({
 
       // 批量保存标注
       await api.post(`/field-annotation/batch-save`, {
-        sessionId,
-        annotations
+        sessionId: sessionId,
+        annotations: annotations
       });
 
       message.success('字段标注保存成功！');
@@ -121,26 +121,12 @@ export const FieldAnnotationForm: React.FC<FieldAnnotationFormProps> = ({
       // 先保存当前标注
       await handleSave();
       
-      // 验证标注完整性
-      const response = await api.get(`/field-annotation/validate/${sessionId}`);
-      const validation = response.data;
-      
-      if (!validation.isComplete) {
-        message.warning(`还有 ${validation.missingFields.length} 个字段未标注`);
-        return;
-      }
-      
-      if (validation.errors.length > 0) {
-        message.error(`标注验证失败: ${validation.errors.join(', ')}`);
-        return;
-      }
-      
-      message.success('字段标注完成！');
+      message.success('字段标注已保存，进入数据分析！');
       onComplete();
       
     } catch (error) {
       console.error('完成标注失败:', error);
-      message.error('完成标注失败');
+      message.error('保存标注失败');
     }
   };
 
@@ -167,17 +153,32 @@ export const FieldAnnotationForm: React.FC<FieldAnnotationFormProps> = ({
     }
   };
 
-  const getProgressStatus = () => {
-    if (progress.progress === 100) return 'success';
-    if (progress.progress > 0) return 'active';
-    return 'normal';
+  const handleFieldTypeChange = async (fieldName: string, newType: string) => {
+    try {
+      // 调用API更新字段类型
+      await api.post('/field-annotation/update-type', {
+        sessionId,
+        fieldName,
+        fieldType: newType
+      });
+      
+      // 更新本地字段信息
+      setFields(prevFields => 
+        prevFields.map(field => 
+          field.name === fieldName 
+            ? { ...field, type: newType }
+            : field
+        )
+      );
+      
+      message.success(`字段 ${fieldName} 的类型已更新为 ${newType}`);
+    } catch (error) {
+      console.error('更新字段类型失败:', error);
+      message.error('更新字段类型失败');
+    }
   };
 
-  const getProgressColor = () => {
-    if (progress.progress === 100) return '#52c41a';
-    if (progress.progress >= 50) return '#1890ff';
-    return '#faad14';
-  };
+
 
   return (
     <div className="field-annotation-form">
@@ -210,62 +211,7 @@ export const FieldAnnotationForm: React.FC<FieldAnnotationFormProps> = ({
           </Text>
         </div>
 
-        {/* 进度指示器 */}
-        <Card 
-          size="small" 
-          style={{ 
-            marginBottom: 24,
-            background: 'linear-gradient(135deg, #f6ffed 0%, #f0f9ff 100%)',
-            border: '1px solid #b7eb8f'
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <Text strong style={{ fontSize: 15 }}>标注进度</Text>
-              <Badge 
-                count={`${progress.annotatedFields}/${progress.totalFields}`}
-                style={{ 
-                  backgroundColor: progress.progress === 100 ? '#52c41a' : '#1890ff',
-                  marginLeft: 8
-                }}
-              />
-            </div>
-            <Text type="secondary" style={{ fontSize: 13 }}>
-              {progress.progress === 100 ? '已完成' : '进行中'}
-            </Text>
-          </div>
-          
-          <Progress
-            percent={progress.progress}
-            status={getProgressStatus()}
-            strokeColor={{
-              '0%': '#52c41a',
-              '100%': '#1890ff',
-            }}
-            showInfo={true}
-            strokeWidth={8}
-            format={(percent) => (
-              <span style={{ display: 'flex', alignItems: 'center', fontSize: 13, fontWeight: 500 }}>
-                {percent === 100 ? (
-                  <CheckCircleOutlined style={{ color: '#52c41a', marginRight: 4 }} />
-                ) : (
-                  <ExclamationCircleOutlined style={{ color: '#faad14', marginRight: 4 }} />
-                )}
-                {percent}%
-              </span>
-            )}
-          />
-          
-          {progress.missingAnnotations.length > 0 && (
-            <div style={{ marginTop: 8, padding: 8, backgroundColor: '#fff7e6', borderRadius: 4 }}>
-              <Text type="warning" style={{ fontSize: 12 }}>
-                <ExclamationCircleOutlined style={{ marginRight: 4 }} />
-                待标注字段: {progress.missingAnnotations.slice(0, 5).join(', ')}
-                {progress.missingAnnotations.length > 5 && ` 等${progress.missingAnnotations.length}个`}
-              </Text>
-            </div>
-          )}
-        </Card>
+       
 
         {/* 操作按钮 */}
         <div className="action-buttons" style={{ marginBottom: 24 }}>
@@ -299,6 +245,7 @@ export const FieldAnnotationForm: React.FC<FieldAnnotationFormProps> = ({
             fields={fields}
             loading={loading}
             form={form}
+            onFieldTypeChange={handleFieldTypeChange}
           />
         </Form>
 
@@ -324,15 +271,10 @@ export const FieldAnnotationForm: React.FC<FieldAnnotationFormProps> = ({
             icon={<ArrowRightOutlined />}
             onClick={handleComplete}
             loading={saving}
-            disabled={progress.progress < 100}
             style={{
-              background: progress.progress === 100 
-                ? 'linear-gradient(135deg, #52c41a 0%, #389e0d 100%)'
-                : undefined,
+              background: 'linear-gradient(135deg, #52c41a 0%, #389e0d 100%)',
               border: 'none',
-              boxShadow: progress.progress === 100 
-                ? '0 2px 8px rgba(82, 196, 26, 0.3)'
-                : undefined
+              boxShadow: '0 2px 8px rgba(82, 196, 26, 0.3)'
             }}
           >
             完成标注，进入数据分析

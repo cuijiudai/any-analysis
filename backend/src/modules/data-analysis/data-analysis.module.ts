@@ -2,16 +2,18 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DataAnalysisController } from './data-analysis.controller';
 import { DataAnalysisService } from './data-analysis.service';
+import { ChartDataService } from './chart-data.service';
 import { DataSession } from '../../entities/data-session.entity';
 import { DataTableSchema } from '../../entities/data-table-schema.entity';
 import { FieldAnnotation } from '../../entities/field-annotation.entity';
+import { ChartConfig } from '../../entities/chart-config.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([DataSession, DataTableSchema, FieldAnnotation]),
+    TypeOrmModule.forFeature([DataSession, DataTableSchema, FieldAnnotation, ChartConfig]),
   ],
   controllers: [DataAnalysisController],
-  providers: [DataAnalysisService],
-  exports: [DataAnalysisService],
+  providers: [DataAnalysisService, ChartDataService],
+  exports: [DataAnalysisService, ChartDataService],
 })
 export class DataAnalysisModule {}

@@ -8,6 +8,7 @@ import {
   Unique,
 } from 'typeorm';
 import { DataSession } from './data-session.entity';
+import { FieldType } from '../common/enums/field-type.enum';
 
 @Entity('field_annotations')
 @Unique('unique_session_field', ['sessionId', 'fieldName'])
@@ -21,8 +22,13 @@ export class FieldAnnotation {
   @Column({ name: 'field_name', type: 'varchar', length: 255 })
   fieldName: string;
 
-  @Column({ name: 'field_type', type: 'varchar', length: 50 })
-  fieldType: string;
+  @Column({ 
+    name: 'field_type', 
+    type: 'enum',
+    enum: FieldType,
+    default: FieldType.STRING
+  })
+  fieldType: FieldType;
 
   @Column({ type: 'varchar', length: 255 })
   label: string;

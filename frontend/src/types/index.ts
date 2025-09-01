@@ -68,6 +68,7 @@ export interface ParseCurlResponse {
 export interface FieldInfo {
   name: string;
   type: string;
+  label: string;
   suggestedLabel: string;
   sampleValues: any[];
   annotation?: FieldAnnotation;
@@ -77,6 +78,7 @@ export interface FieldAnnotation {
   id?: string;
   sessionId?: string;
   fieldName: string;
+  fieldType?: string;
   label: string;
   description?: string;
   createdAt?: string;

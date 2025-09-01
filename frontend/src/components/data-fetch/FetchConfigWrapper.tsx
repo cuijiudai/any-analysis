@@ -49,59 +49,6 @@ export const FetchConfigWrapper: React.FC<FetchConfigWrapperProps> = ({
 }) => {
   return (
     <div className="fetch-config-wrapper">
-      <Card
-        style={{
-          borderRadius: 12,
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)',
-          marginBottom: 16
-        }}
-      >
-        <div className="config-header" style={{ marginBottom: 24 }}>
-          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
-            <Badge 
-              count="1" 
-              style={{ 
-                backgroundColor: '#1890ff',
-                marginRight: 12,
-                fontSize: 12,
-                minWidth: 20,
-                height: 20,
-                lineHeight: '20px'
-              }}
-            />
-            <Title level={3} style={{ margin: 0, color: '#1890ff' }}>
-              数据拉取配置
-            </Title>
-          </div>
-          <Text type="secondary" style={{ fontSize: 14, lineHeight: 1.6 }}>
-            配置API参数并拉取数据。完成配置后可以执行冒烟测试验证连接，
-            然后开始正式的数据拉取。
-          </Text>
-        </div>
-
-        {/* 操作按钮 */}
-        <div className="action-buttons" style={{ marginBottom: 24 }}>
-          <Space size="middle">
-            <Button 
-              type="dashed" 
-              icon={<SettingOutlined />}
-              style={{ borderColor: '#1890ff', color: '#1890ff' }}
-            >
-              配置参数
-            </Button>
-            <Button 
-              type="dashed" 
-              icon={<RocketOutlined />}
-              style={{ borderColor: '#1890ff', color: '#1890ff' }}
-            >
-              冒烟测试
-            </Button>
-          </Space>
-        </div>
-
-        <Divider style={{ margin: '24px 0' }} />
-      </Card>
-
       <Row gutter={16}>
         <Col xs={24} lg={10}>
           <FetchConfigForm
