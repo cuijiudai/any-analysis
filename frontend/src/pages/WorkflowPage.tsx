@@ -391,10 +391,23 @@ const WorkflowPage: React.FC = () => {
       {/* 数据拉取配置步骤 */}
       {currentStep === 'config' && (
         <FetchConfigWrapper
-          initialValues={currentConfig || undefined}
+          initialValues={currentConfig ? { ...currentConfig, name: session?.name } : session?.name ? { name: session.name } : undefined}
           onConfigChange={handleConfigChange}
           onSmokeTestComplete={handleSmokeTestComplete}
           onStartFetch={handleStartFetch}
+          onSaveConfig={async (config) => {
+            try {
+              await api.post('/data-fetch/configure', {
+                ...config,
+                sessionId
+              });
+              message.success('配置保存成功');
+              // 重新加载会话信息以更新名称
+              await loadSession();
+            } catch (error: any) {
+              message.error(`保存失败: ${error.message}`);
+            }
+          }}
           loading={fetchLoading}
           fetchStatus={fetchStatus}
           smokeTestResult={smokeTestResult}

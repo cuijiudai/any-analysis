@@ -175,9 +175,11 @@ const FetchConfigForm: React.FC<FetchConfigFormProps> = ({
     setTimeout(validateForm, 300);
   };
 
+  const [initialized, setInitialized] = useState(false);
+
   // 初始化时验证表单和设置初始值
   useEffect(() => {
-    if (initialValues) {
+    if (initialValues && !initialized) {
       // 处理初始值中的请求头
       const headersArray = initialValues.headers 
         ? Object.entries(initialValues.headers).map(([key, value]) => ({ key, value }))
@@ -203,10 +205,12 @@ const FetchConfigForm: React.FC<FetchConfigFormProps> = ({
       if (initialValues.totalField) {
         setTotalField(initialValues.totalField);
       }
+      
+      setInitialized(true);
     }
     
     validateForm();
-  }, [initialValues]);
+  }, [initialValues, initialized]);
 
   // 处理冒烟测试完成
   const handleSmokeTestComplete = (result: SmokeTestResponse) => {

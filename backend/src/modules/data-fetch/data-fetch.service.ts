@@ -355,7 +355,7 @@ export class DataFetchService {
    * 创建拉取配置
    */
   async createFetchConfig(createFetchConfigDto: CreateFetchConfigDto): Promise<FetchConfig> {
-    const { sessionId, ...configData } = createFetchConfigDto;
+    const { sessionId, name, ...configData } = createFetchConfigDto;
 
     // 验证会话是否存在
     const session = await this.dataSessionRepository.findOne({
@@ -364,6 +364,12 @@ export class DataFetchService {
 
     if (!session) {
       throw new NotFoundException(`会话 ${sessionId} 不存在`);
+    }
+
+    // 如果提供了名称，更新会话名称
+    if (name && name.trim()) {
+      session.name = name.trim();
+      await this.dataSessionRepository.save(session);
     }
 
     // 检查是否已有配置

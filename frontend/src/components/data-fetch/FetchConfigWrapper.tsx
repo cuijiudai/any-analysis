@@ -23,10 +23,11 @@ interface FetchStatus {
 }
 
 interface FetchConfigWrapperProps {
-  initialValues?: FetchConfig;
+  initialValues?: Partial<FetchConfig>;
   onConfigChange?: (config: FetchConfig) => void;
   onSmokeTestComplete?: (result: SmokeTestResponse) => void;
   onStartFetch?: (config: FetchConfig) => void;
+  onSaveConfig?: (config: FetchConfig) => void;
   loading?: boolean;
   fetchStatus?: FetchStatus | null;
   smokeTestResult?: SmokeTestResponse | null;
@@ -40,6 +41,7 @@ export const FetchConfigWrapper: React.FC<FetchConfigWrapperProps> = ({
   onConfigChange,
   onSmokeTestComplete,
   onStartFetch,
+  onSaveConfig,
   loading = false,
   fetchStatus,
   smokeTestResult,
@@ -56,6 +58,7 @@ export const FetchConfigWrapper: React.FC<FetchConfigWrapperProps> = ({
             onConfigChange={onConfigChange}
             onSmokeTestComplete={onSmokeTestComplete}
             onStartFetch={onStartFetch}
+            onSaveConfig={onSaveConfig}
             loading={loading}
           />
         </Col>
