@@ -71,13 +71,13 @@ export class DataFetchExecutorService {
       }
 
       // 更新会话状态
-      await this.dataSessionService.updateStatus(sessionId, SessionStatus.FETCHING);
+      await this.dataSessionService.updateStatus(sessionId, SessionStatus.UNFETCHED);
 
       // 执行拉取流程
       const result = await this.performFetch(sessionId, fetchConfig);
 
       // 更新最终状态
-      await this.dataSessionService.updateStatus(sessionId, SessionStatus.COMPLETED);
+      await this.dataSessionService.updateStatus(sessionId, SessionStatus.FETCHED);
       this.progressMonitorService.markCompleted(sessionId, result.totalRecords, result.totalPages);
 
       return {
@@ -90,7 +90,7 @@ export class DataFetchExecutorService {
       this.logger.error(`数据拉取失败: ${error.message}`, error.stack);
       
       // 更新错误状态
-      await this.dataSessionService.updateStatus(sessionId, SessionStatus.CONFIGURING);
+      await this.dataSessionService.updateStatus(sessionId, SessionStatus.UNFETCHED);
       this.progressMonitorService.markError(sessionId, error.message);
 
       return {
@@ -398,7 +398,7 @@ export class DataFetchExecutorService {
       this.progressMonitorService.markCancelled(sessionId);
 
       // 更新会话状态
-      await this.dataSessionService.updateStatus(sessionId, SessionStatus.CONFIGURING);
+      await this.dataSessionService.updateStatus(sessionId, SessionStatus.UNFETCHED);
       
       this.logger.log(`用户取消了会话 ${sessionId} 的数据拉取`);
     }

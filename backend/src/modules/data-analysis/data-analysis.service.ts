@@ -367,41 +367,56 @@ export class DataAnalysisService {
     sampleData: any[];
     createdAt?: string;
   }> {
-    const schema = await this.getSessionSchema(sessionId);
-    const tableName = schema.tableName;
-    const fieldDefinitions = schema.fieldDefinitions as Record<string, any>;
+    try {
+      const schema = await this.getSessionSchema(sessionId);
+      const tableName = schema.tableName;
+      const fieldDefinitions = schema.fieldDefinitions as Record<string, any>;
 
-    // 获取总记录数
-    const countResult = await this.dataSource.query(`
-      SELECT COUNT(*) as total FROM \`${tableName}\`
-    `);
-    const totalRecords = parseInt(countResult[0]?.total || 0);
+      // 获取总记录数
+      const countResult = await this.dataSource.query(`
+        SELECT COUNT(*) as total FROM \`${tableName}\`
+      `);
+      const totalRecords = parseInt(countResult[0]?.total || 0);
 
-    // 获取字段标注数
-    const annotatedFields = await this.annotationRepository.count({
-      where: { sessionId },
-    });
+      // 获取字段标注数
+      const annotatedFields = await this.annotationRepository.count({
+        where: { sessionId },
+      });
 
-    // 统计数据类型
-    const dataTypes: Record<string, number> = {};
-    Object.values(fieldDefinitions).forEach((fieldDef: any) => {
-      const type = fieldDef.type || 'string';
-      dataTypes[type] = (dataTypes[type] || 0) + 1;
-    });
+      // 统计数据类型
+      const dataTypes: Record<string, number> = {};
+      Object.values(fieldDefinitions).forEach((fieldDef: any) => {
+        const type = fieldDef.type || 'string';
+        dataTypes[type] = (dataTypes[type] || 0) + 1;
+      });
 
-    // 获取样本数据（前5条）
-    const sampleData = await this.dataSource.query(`
-      SELECT * FROM \`${tableName}\` LIMIT 5
-    `);
+      // 获取样本数据（前5条）
+      const sampleData = await this.dataSource.query(`
+        SELECT * FROM \`${tableName}\` LIMIT 5
+      `);
 
-    return {
-      totalRecords,
-      fieldsCount: Object.keys(fieldDefinitions).length,
-      annotatedFields,
-      dataTypes,
-      sampleData,
-      createdAt: schema.createdAt?.toISOString(),
-    };
+      return {
+        totalRecords,
+        fieldsCount: Object.keys(fieldDefinitions).length,
+        annotatedFields,
+        dataTypes,
+        sampleData,
+        createdAt: schema.createdAt?.toISOString(),
+      };
+    } catch (error) {
+      // 如果没有数据表结构，返回默认值
+      const annotatedFields = await this.annotationRepository.count({
+        where: { sessionId },
+      });
+      
+      return {
+        totalRecords: 0,
+        fieldsCount: 0,
+        annotatedFields,
+        dataTypes: {},
+        sampleData: [],
+      };
+    }
   }
 
   /**

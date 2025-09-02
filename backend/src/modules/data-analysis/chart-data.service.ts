@@ -1,12 +1,13 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
-import { DataSession } from '../../entities/data-session.entity';
+import { DataSession, SessionStatus } from '../../entities/data-session.entity';
 import { DataTableSchema } from '../../entities/data-table-schema.entity';
 import { FieldAnnotation } from '../../entities/field-annotation.entity';
 import { ChartConfig } from '../../entities/chart-config.entity';
 import { FilterCondition, ChartData, ChartDataPoint, ChartConfigDto } from './data-analysis.service';
 import { AggregationType } from '../../entities/chart-config.entity';
+import { DataSessionService } from '../data-session/data-session.service';
 
 export interface ChartTemplate {
   id: string;
@@ -98,6 +99,7 @@ export class ChartDataService {
     @InjectRepository(ChartConfig)
     private readonly chartConfigRepository: Repository<ChartConfig>,
     private readonly dataSource: DataSource,
+    private readonly dataSessionService: DataSessionService,
   ) {}
 
   /**
@@ -369,7 +371,16 @@ export class ChartDataService {
       updatedAt: new Date(),
     });
 
-    return await this.chartConfigRepository.save(chartConfig);
+    const savedConfig = await this.chartConfigRepository.save(chartConfig);
+    
+    // 更新会话状态为已分析
+    try {
+      await this.dataSessionService.updateStatus(config.sessionId, SessionStatus.ANALYZED);
+    } catch (error) {
+      console.warn(`更新会话 ${config.sessionId} 状态失败:`, error.message);
+    }
+
+    return savedConfig;
   }
 
   /**
@@ -471,17 +482,13 @@ export class ChartDataService {
   }
 
   // 私有辅助方法
-  private async getSessionSchema(sessionId: string): Promise<DataTableSchema> {
+  private async getSessionSchema(sessionId: string): Promise<DataTableSchema | null> {
     const session = await this.sessionRepository.findOne({ where: { id: sessionId } });
     if (!session) {
       throw new NotFoundException(`会话 ${sessionId} 不存在`);
     }
 
     const schema = await this.schemaRepository.findOne({ where: { sessionId } });
-    if (!schema) {
-      throw new NotFoundException(`会话 ${sessionId} 没有数据表结构`);
-    }
-
     return schema;
   }
 

@@ -12,6 +12,13 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     console.log('API请求:', config.method?.toUpperCase(), config.url);
+    
+    // 添加JWT token
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    
     return config;
   },
   (error) => {

@@ -80,7 +80,7 @@ describe('DataSessionService', () => {
       const mockSession = {
         id: 'test-id',
         name: '测试会话',
-        status: SessionStatus.CONFIGURING,
+        status: SessionStatus.UNFETCHED,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -88,11 +88,13 @@ describe('DataSessionService', () => {
       mockRepository.create.mockReturnValue(mockSession);
       mockRepository.save.mockResolvedValue(mockSession);
 
-      const result = await service.createSession(createSessionDto);
+      const userId = 'test-user-id';
+      const result = await service.createSession(createSessionDto, userId);
 
       expect(mockRepository.create).toHaveBeenCalledWith({
         name: createSessionDto.name,
-        status: SessionStatus.CONFIGURING,
+        userId: userId,
+        status: SessionStatus.UNFETCHED,
       });
       expect(mockRepository.save).toHaveBeenCalledWith(mockSession);
       expect(result).toEqual(mockSession);
@@ -105,7 +107,7 @@ describe('DataSessionService', () => {
       const mockSession = {
         id: sessionId,
         name: '测试会话',
-        status: SessionStatus.CONFIGURING,
+        status: SessionStatus.UNFETCHED,
       };
 
       mockRepository.findOne.mockResolvedValue(mockSession);
@@ -137,18 +139,24 @@ describe('DataSessionService', () => {
         { id: '2', name: '会话2' },
       ];
 
+
+
+      const userId = 'test-user-id';
       const mockQueryBuilder = {
         leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
         skip: jest.fn().mockReturnThis(),
         take: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
+        getSql: jest.fn().mockReturnValue('SELECT * FROM sessions'),
+        getParameters: jest.fn().mockReturnValue({}),
         getManyAndCount: jest.fn().mockResolvedValue([mockSessions, 2]),
       };
 
       mockRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
 
-      const result = await service.getSessionList(queryDto);
+      const result = await service.getSessionList(queryDto, userId);
 
       expect(result).toEqual({
         sessions: mockSessions,

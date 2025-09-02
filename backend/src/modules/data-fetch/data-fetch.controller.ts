@@ -7,11 +7,15 @@ import {
   Param,
   HttpCode,
   HttpStatus,
+  UseGuards,
+  SetMetadata,
 } from '@nestjs/common';
 import { DataFetchService } from './data-fetch.service';
 import { SmokeTestDto, ParseCurlDto, CreateFetchConfigDto, ExecuteFetchDto } from './dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('data-fetch')
+@UseGuards(JwtAuthGuard)
 export class DataFetchController {
   constructor(private readonly dataFetchService: DataFetchService) {}
 
@@ -105,6 +109,7 @@ export class DataFetchController {
    * 执行正式数据拉取
    */
   @Post('execute')
+  @SetMetadata('timeout', 0)
   async executeFetch(@Body() executeFetchDto: ExecuteFetchDto) {
     const result = await this.dataFetchService.executeFetch(executeFetchDto);
     

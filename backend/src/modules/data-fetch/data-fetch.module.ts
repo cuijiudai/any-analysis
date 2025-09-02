@@ -13,12 +13,14 @@ import { HttpClientModule } from '../../common/http-client';
 import { CurlParserService, SchemaAnalysisService } from '../../common/utils';
 import { DynamicTableService } from '../../common/database-utils';
 import { DataSessionModule } from '../data-session/data-session.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([FetchConfig, DataSession, DataTableSchema]),
     HttpClientModule,
     DataSessionModule,
+    AuthModule,
     EventEmitterModule.forRoot(),
   ],
   controllers: [DataFetchController],

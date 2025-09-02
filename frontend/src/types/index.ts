@@ -2,9 +2,10 @@
 export interface DataSession {
   id: string;
   name: string;
-  status: 'configuring' | 'fetching' | 'annotating' | 'analyzing' | 'completed';
+  status: 'unfetched' | 'fetched' | 'analyzed';
   createdAt: string;
   updatedAt: string;
+  isShared?: boolean;
 }
 
 // 拉取配置相关类型

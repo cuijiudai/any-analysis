@@ -147,11 +147,9 @@ const DataViewPage: React.FC = () => {
   // 获取状态标签
   const getStatusTag = (status: string) => {
     const statusMap: Record<string, { color: string; text: string }> = {
-      'configuring': { color: 'blue', text: '配置中' },
-      'fetching': { color: 'processing', text: '拉取中' },
-      'annotating': { color: 'orange', text: '标注中' },
-      'analyzing': { color: 'purple', text: '分析中' },
-      'completed': { color: 'success', text: '已完成' },
+      'unfetched': { color: 'blue', text: '未拉取' },
+      'fetched': { color: 'processing', text: '已拉取' },
+      'analyzed': { color: 'success', text: '已分析' },
     };
 
     const config = statusMap[status] || { color: 'default', text: status };
@@ -223,7 +221,7 @@ const DataViewPage: React.FC = () => {
           <Button
             icon={<TagsOutlined />}
             onClick={handleFieldAnnotation}
-            disabled={session.status !== 'completed'}
+            disabled={!['fetched', 'analyzed'].includes(session.status)}
           >
             字段标注
           </Button>
@@ -318,7 +316,7 @@ const DataViewPage: React.FC = () => {
       )}
 
       {/* 数据表格 */}
-      {session.status === 'completed' && sessionId ? (
+      {['fetched', 'analyzed'].includes(session.status) && sessionId ? (
         <Card title="历史拉取数据">
           <DataTable
             sessionId={sessionId}
@@ -332,13 +330,12 @@ const DataViewPage: React.FC = () => {
         <Card title="数据预览">
           <div style={{ textAlign: 'center', padding: '40px' }}>
             <Text type="secondary">
-              {session.status === 'configuring' && '数据拉取尚未开始'}
-              {session.status === 'fetching' && '数据拉取进行中...'}
-              {session.status === 'annotating' && '字段标注进行中...'}
-              {session.status === 'analyzing' && '数据分析进行中...'}
+              {session.status === 'unfetched' && '请先拉取数据'}
+              {session.status === 'fetched' && '数据已就绪，可以开始分析'}
+              {session.status === 'analyzed' && '数据分析已完成'}
             </Text>
             <br />
-            {session.status === 'configuring' && (
+            {session.status === 'unfetched' && (
               <Button
                 type="primary"
                 onClick={handleEditConfig}

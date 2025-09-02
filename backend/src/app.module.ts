@@ -7,6 +7,8 @@ import { DataSessionModule } from "./modules/data-session/data-session.module";
 import { DataFetchModule } from "./modules/data-fetch/data-fetch.module";
 import { FieldAnnotationModule } from "./modules/field-annotation/field-annotation.module";
 import { DataAnalysisModule } from "./modules/data-analysis/data-analysis.module";
+import { AuthModule } from "./modules/auth/auth.module";
+import { MarketModule } from "./modules/market/market.module";
 import { HealthController } from "./health/health.controller";
 
 @Module({
@@ -22,6 +24,8 @@ import { HealthController } from "./health/health.controller";
     DataFetchModule,
     FieldAnnotationModule,
     DataAnalysisModule,
+    AuthModule,
+    MarketModule,
   ],
   controllers: [HealthController],
   providers: [DatabaseInitService],

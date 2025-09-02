@@ -9,11 +9,15 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  UseGuards,
+  Request,
 } from '@nestjs/common';
 import { DataSessionService } from './data-session.service';
 import { CreateSessionDto, UpdateSessionDto, SessionListQueryDto } from './dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('data-session')
+@UseGuards(JwtAuthGuard)
 export class DataSessionController {
   constructor(private readonly dataSessionService: DataSessionService) {}
 
@@ -21,8 +25,8 @@ export class DataSessionController {
    * 创建新的数据会话
    */
   @Post()
-  async createSession(@Body() createSessionDto: CreateSessionDto) {
-    const session = await this.dataSessionService.createSession(createSessionDto);
+  async createSession(@Request() req, @Body() createSessionDto: CreateSessionDto) {
+    const session = await this.dataSessionService.createSession(createSessionDto, req.user.id);
     return {
       success: true,
       data: session,
@@ -34,8 +38,8 @@ export class DataSessionController {
    * 获取会话列表
    */
   @Get()
-  async getSessionList(@Query() queryDto: SessionListQueryDto) {
-    const result = await this.dataSessionService.getSessionList(queryDto);
+  async getSessionList(@Request() req, @Query() queryDto: SessionListQueryDto) {
+    const result = await this.dataSessionService.getSessionList(queryDto, req.user.id);
     return {
       success: true,
       data: result,
@@ -46,8 +50,8 @@ export class DataSessionController {
    * 获取会话详情
    */
   @Get(':id')
-  async getSessionById(@Param('id') id: string) {
-    const session = await this.dataSessionService.getSessionById(id);
+  async getSessionById(@Request() req, @Param('id') id: string) {
+    const session = await this.dataSessionService.getSessionById(id, req.user.id);
     return {
       success: true,
       data: session,
@@ -59,10 +63,11 @@ export class DataSessionController {
    */
   @Put(':id')
   async updateSession(
+    @Request() req,
     @Param('id') id: string,
     @Body() updateSessionDto: UpdateSessionDto,
   ) {
-    const session = await this.dataSessionService.updateSession(id, updateSessionDto);
+    const session = await this.dataSessionService.updateSession(id, updateSessionDto, req.user.id);
     return {
       success: true,
       data: session,
@@ -75,8 +80,8 @@ export class DataSessionController {
    */
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
-  async deleteSession(@Param('id') id: string) {
-    await this.dataSessionService.deleteSession(id);
+  async deleteSession(@Request() req, @Param('id') id: string) {
+    await this.dataSessionService.deleteSession(id, req.user.id);
     return {
       success: true,
       message: '会话删除成功',
@@ -100,10 +105,11 @@ export class DataSessionController {
    */
   @Post(':id/duplicate')
   async duplicateSession(
+    @Request() req,
     @Param('id') id: string,
     @Body() body: { name?: string },
   ) {
-    const newSession = await this.dataSessionService.duplicateSession(id, body.name);
+    const newSession = await this.dataSessionService.duplicateSession(id, body.name, req.user.id);
     return {
       success: true,
       data: newSession,
@@ -116,8 +122,8 @@ export class DataSessionController {
    */
   @Delete('batch')
   @HttpCode(HttpStatus.OK)
-  async batchDeleteSessions(@Body() body: { ids: string[] }) {
-    await this.dataSessionService.batchDeleteSessions(body.ids);
+  async batchDeleteSessions(@Request() req, @Body() body: { ids: string[] }) {
+    await this.dataSessionService.batchDeleteSessions(body.ids, req.user.id);
     return {
       success: true,
       message: '批量删除成功',

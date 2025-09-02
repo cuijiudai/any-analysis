@@ -2,12 +2,14 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DataSessionController } from './data-session.controller';
 import { DataSessionService } from './data-session.service';
+import { AuthModule } from '../auth/auth.module';
 import {
   DataSession,
   FetchConfig,
   FieldAnnotation,
   ChartConfig,
   DataTableSchema,
+  MarketSession,
 } from '../../entities';
 
 @Module({
@@ -18,7 +20,9 @@ import {
       FieldAnnotation,
       ChartConfig,
       DataTableSchema,
+      MarketSession,
     ]),
+    AuthModule,
   ],
   controllers: [DataSessionController],
   providers: [DataSessionService],

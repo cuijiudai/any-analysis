@@ -6,6 +6,8 @@ import {
   DataTableSchema,
   FieldAnnotation,
   ChartConfig,
+  User,
+  MarketSession,
 } from '../entities';
 
 @Injectable()
@@ -24,8 +26,10 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
         DataTableSchema,
         FieldAnnotation,
         ChartConfig,
+        User,
+        MarketSession,
       ],
-      synchronize: process.env.NODE_ENV !== 'production',
+      synchronize: false,
       logging: process.env.NODE_ENV === 'development',
       charset: 'utf8mb4',
       timezone: '+08:00',

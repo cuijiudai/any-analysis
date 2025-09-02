@@ -18,7 +18,7 @@ describe('DataAnalysisService', () => {
   const mockSession = {
     id: 'test-session-id',
     name: 'Test Session',
-    status: 'completed',
+    status: 'analyzed',
   };
 
   const mockSchema = {

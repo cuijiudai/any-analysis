@@ -429,7 +429,7 @@ const FetchedDataPreview: React.FC<FetchedDataPreviewProps> = ({
             }}
           >
             <Title level={5} style={{ margin: 0 }}>
-              拉取数据预览
+              数据预览
             </Title>
             <Space>
               <Search

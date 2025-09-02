@@ -10,12 +10,15 @@ import {
   Typography,
   Input,
   Select,
+  Modal,
+  Form,
 } from "antd";
 import {
   DeleteOutlined,
   PlusOutlined,
   SearchOutlined,
   ReloadOutlined,
+  ShareAltOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
@@ -31,6 +34,11 @@ const SessionListPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
+  const [shareModalVisible, setShareModalVisible] = useState(false);
+  const [selectedSession, setSelectedSession] = useState<DataSession | null>(
+    null
+  );
+  const [form] = Form.useForm();
 
   // 分页状态
   const [pagination, setPagination] = useState({
@@ -107,13 +115,61 @@ const SessionListPage: React.FC = () => {
     navigate("/");
   };
 
+  // 分享会话
+  const handleShare = (sessionId: string) => {
+    const session = sessions.find(s => s.id === sessionId);
+    setSelectedSession(session || null);
+    setShareModalVisible(true);
+    form.setFieldsValue({ 
+      sessionId,
+      title: session?.name || ''
+    });
+  };
+
+  // 取消分享
+  const handleCancelShare = async (sessionId: string) => {
+    try {
+      const response = await api.post(`/market/cancel/${sessionId}`);
+      if (response.data.success) {
+        message.success("取消分享成功");
+        loadSessions(pagination.current, pagination.pageSize);
+      }
+    } catch (error: any) {
+      if (error.response?.status === 401) {
+        message.error("请先登录");
+        navigate("/login");
+      } else {
+        message.error(error.response?.data?.message || "取消分享失败");
+      }
+    }
+  };
+
+  // 提交分享
+  const handleShareSubmit = async (values: any) => {
+    try {
+      const response = await api.post("/market/share", values);
+      if (response.data.success) {
+        message.success("分享成功");
+        setShareModalVisible(false);
+        form.resetFields();
+        loadSessions(pagination.current, pagination.pageSize);
+      }
+    } catch (error: any) {
+      if (error.response?.status === 401) {
+        message.error("请先登录");
+        navigate("/login");
+      } else {
+        message.error(error.response?.data?.message || "分享失败");
+      }
+    }
+  };
+
   // 状态标签渲染
   const renderStatus = (status: string) => {
     const statusMap: Record<string, { color: string; text: string }> = {
-      "configuring": { color: "blue", text: "配置中" },
-      "fetching": { color: "processing", text: "拉取中" },
-      "completed": { color: "success", text: "已完成" },
-      "error": { color: "error", text: "错误" },
+      "unfetched": { color: "blue", text: "未拉取" },
+      "fetched": { color: "processing", text: "已拉取" },
+      "analyzed": { color: "success", text: "已分析" },
     };
 
     const config = statusMap[status] || { color: "default", text: status };
@@ -167,19 +223,43 @@ const SessionListPage: React.FC = () => {
     {
       title: "操作",
       key: "action",
-      width: 80,
+      width: 160,
       render: (_: any, record: DataSession) => (
-        <Popconfirm
-          title="确定要删除这个会话吗？"
-          description="删除后将无法恢复，包括所有相关数据。"
-          onConfirm={() => handleDelete(record.id)}
-          okText="确定"
-          cancelText="取消"
-        >
-          <Button type="link" size="small" danger icon={<DeleteOutlined />}>
-            删除
-          </Button>
-        </Popconfirm>
+        <Space size="small">
+          {record.isShared ? (
+            <Popconfirm
+              title="确定要取消分享吗？"
+              description="取消后该数据集将不在数据市场展示。"
+              onConfirm={() => handleCancelShare(record.id)}
+              okText="确定"
+              cancelText="取消"
+            >
+              <Button type="link" size="small">
+                取消分享
+              </Button>
+            </Popconfirm>
+          ) : (
+            <Button
+              type="link"
+              size="small"
+              icon={<ShareAltOutlined />}
+              onClick={() => handleShare(record.id)}
+            >
+              分享
+            </Button>
+          )}
+          <Popconfirm
+            title="确定要删除这个会话吗？"
+            description="删除后将无法恢复，包括所有相关数据。"
+            onConfirm={() => handleDelete(record.id)}
+            okText="确定"
+            cancelText="取消"
+          >
+            <Button type="link" size="small" danger icon={<DeleteOutlined />}>
+              删除
+            </Button>
+          </Popconfirm>
+        </Space>
       ),
     },
   ];
@@ -208,10 +288,9 @@ const SessionListPage: React.FC = () => {
             value={statusFilter || undefined}
             onChange={setStatusFilter}
           >
-            <Option value="configuring">配置中</Option>
-            <Option value="fetching">拉取中</Option>
-            <Option value="completed">已完成</Option>
-            <Option value="error">错误</Option>
+            <Option value="unfetched">未拉取</Option>
+            <Option value="fetched">已拉取</Option>
+            <Option value="analyzed">已分析</Option>
           </Select>
         </Space>
       </Card>
@@ -258,6 +337,56 @@ const SessionListPage: React.FC = () => {
           }}
         />
       </Card>
+
+      {/* 分享对话框 */}
+      <Modal
+        title="分享会话到数据市场"
+        open={shareModalVisible}
+        onCancel={() => setShareModalVisible(false)}
+        footer={null}
+      >
+        <Form form={form} onFinish={handleShareSubmit} layout="vertical">
+          <Form.Item name="sessionId" style={{ display: "none" }}>
+            <Input type="hidden" />
+          </Form.Item>
+
+          <Form.Item
+            name="title"
+            label="标题"
+            rules={[{ required: true, message: "请输入标题" }]}
+          >
+            <Input placeholder="为你的数据集起个标题" />
+          </Form.Item>
+
+          <Form.Item
+            name="description"
+            label="描述"
+            rules={[{ required: true, message: "请输入描述" }]}
+          >
+            <Input.TextArea
+              rows={4}
+              placeholder="描述你的数据集内容、来源和用途"
+            />
+          </Form.Item>
+
+          <Form.Item name="tags" label="标签">
+            <Select
+              mode="tags"
+              placeholder="添加标签（如：金融、电商、API等）"
+              tokenSeparators={[","]}
+            />
+          </Form.Item>
+
+          <Form.Item>
+            <Space>
+              <Button onClick={() => setShareModalVisible(false)}>取消</Button>
+              <Button type="primary" htmlType="submit">
+                分享
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 };

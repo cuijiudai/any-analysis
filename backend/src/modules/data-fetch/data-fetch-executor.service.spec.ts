@@ -76,7 +76,7 @@ describe('DataFetchExecutorService', () => {
     const mockSession = {
       id: 'test-session-id',
       name: 'Test Session',
-      status: 'configuring',
+      status: 'unconfigured',
     };
 
     const mockFetchConfig = {
@@ -132,8 +132,8 @@ describe('DataFetchExecutorService', () => {
       expect(result.totalPages).toBe(2);
       expect(result.tableName).toBe('data_test_session_id');
 
-      expect(mockDataSessionService.updateStatus).toHaveBeenCalledWith('test-session-id', 'fetching');
-      expect(mockDataSessionService.updateStatus).toHaveBeenCalledWith('test-session-id', 'completed');
+      expect(mockDataSessionService.updateStatus).toHaveBeenCalledWith('test-session-id', 'unfetched');
+      expect(mockDataSessionService.updateStatus).toHaveBeenCalledWith('test-session-id', 'fetched');
       expect(mockSchemaAnalysisService.analyzeDataStructure).toHaveBeenCalledWith(mockApiData, 'test-session-id');
       expect(mockDynamicTableService.createTableFromSchema).toHaveBeenCalledWith(mockSchemaResult);
     });
@@ -218,7 +218,7 @@ describe('DataFetchExecutorService', () => {
   describe('getProgress', () => {
     it('should return progress for existing session', async () => {
       // Start a fetch to create progress
-      const mockSession = { id: 'test-session', status: 'configuring' };
+      const mockSession = { id: 'test-session', status: 'unconfigured' };
       const mockConfig = {
         sessionId: 'test-session',
         apiUrl: 'https://api.example.com',
@@ -250,7 +250,7 @@ describe('DataFetchExecutorService', () => {
   describe('clearProgress', () => {
     it('should clear progress for session', async () => {
       // Create progress first
-      const mockSession = { id: 'test-session', status: 'configuring' };
+      const mockSession = { id: 'test-session', status: 'unconfigured' };
       const mockConfig = {
         sessionId: 'test-session',
         apiUrl: 'https://api.example.com',
@@ -272,7 +272,7 @@ describe('DataFetchExecutorService', () => {
 
   describe('cancelFetch', () => {
     it('should cancel ongoing fetch', async () => {
-      const mockSession = { id: 'test-session', status: 'configuring' };
+      const mockSession = { id: 'test-session', status: 'unconfigured' };
       mockDataSessionService.findById.mockResolvedValue(mockSession as any);
 
       // Simulate ongoing fetch by creating progress
@@ -297,7 +297,7 @@ describe('DataFetchExecutorService', () => {
       const progress = service.getProgress('test-session');
       expect(progress?.status).toBe('error');
       expect(progress?.error).toBe('用户取消操作');
-      expect(mockDataSessionService.updateStatus).toHaveBeenCalledWith('test-session', 'configuring');
+      expect(mockDataSessionService.updateStatus).toHaveBeenCalledWith('test-session', 'unconfigured');
     });
   });
 });

@@ -585,7 +585,7 @@ export class DataFetchService {
         headers: config.headers || {},
         params: requestParams,
         data: requestData,
-        timeout: 0, // 取消超时限制
+        timeout: 0, // 不超时
         retries: 2,
       });
 
@@ -698,10 +698,10 @@ export class DataFetchService {
           if (paginationType === "offset") {
             // 索引方式：使用步长计算偏移量
             const stepSize = config.stepSize || pageSize;
-            pageFieldValue = startPageValue + (currentPageIndex - 1) * stepSize;
+            pageFieldValue = (currentPageIndex - 1) * stepSize;
           } else {
             // 页码方式：直接递增页码
-            pageFieldValue = startPageValue + currentPageIndex - 1;
+            pageFieldValue = currentPageIndex;
           }
 
           if (config.method === "GET") {
@@ -738,7 +738,7 @@ export class DataFetchService {
             headers: config.headers || {},
             params: pageParams,
             data: pageRequestData,
-            timeout: 0, // 取消超时限制
+            timeout: 0, // 不超时
             retries: 2,
           });
 

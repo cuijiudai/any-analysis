@@ -9,7 +9,7 @@ export class InitialMigration1700000000000 implements MigrationInterface {
       CREATE TABLE IF NOT EXISTS \`data_sessions\` (
         \`id\` varchar(36) NOT NULL,
         \`name\` varchar(255) NOT NULL,
-        \`status\` enum('configuring', 'fetching', 'annotating', 'analyzing', 'completed') NOT NULL DEFAULT 'configuring',
+        \`status\` enum('unconfigured', 'unfetched', 'fetched', 'analyzed') NOT NULL DEFAULT 'unconfigured',
         \`created_at\` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
         \`updated_at\` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
         PRIMARY KEY (\`id\`)

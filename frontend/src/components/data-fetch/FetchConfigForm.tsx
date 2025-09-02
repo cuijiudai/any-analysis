@@ -220,6 +220,12 @@ const FetchConfigForm: React.FC<FetchConfigFormProps> = ({
       if (initialValues.totalField) {
         setTotalField(initialValues.totalField);
       }
+      if (initialValues.paginationType) {
+        setPaginationType(initialValues.paginationType);
+      }
+      if (initialValues.stepSize) {
+        setStepSize(initialValues.stepSize);
+      }
 
       setInitialized(true);
     }
@@ -631,6 +637,7 @@ const FetchConfigForm: React.FC<FetchConfigFormProps> = ({
                     pageField: values.pageField,
                     totalField: values.totalField,
                     pageSize: values.pageSize,
+                    stepSize: values.stepSize,
                     name: values.name,
                     dataPath: values.dataPath,
                   };
@@ -679,6 +686,7 @@ const FetchConfigForm: React.FC<FetchConfigFormProps> = ({
                     pageField: values.pageField,
                     totalField: values.totalField,
                     pageSize: values.pageSize,
+                    stepSize: values.stepSize,
                     name: values.name,
                     dataPath: values.dataPath,
                   };

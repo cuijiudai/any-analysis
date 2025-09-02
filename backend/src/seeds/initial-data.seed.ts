@@ -17,7 +17,7 @@ export class InitialDataSeed {
     // 创建示例数据会话
     const demoSession = sessionRepository.create({
       name: '示例数据会话',
-      status: SessionStatus.CONFIGURING,
+      status: SessionStatus.UNFETCHED,
     });
 
     const savedSession = await sessionRepository.save(demoSession);

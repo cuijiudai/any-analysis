@@ -109,17 +109,13 @@ const StepWizard: React.FC<StepWizardProps> = ({
 
         // 根据会话状态设置当前步骤
         switch (sessionData.status) {
-          case "configuring":
+          case "unfetched":
             setCurrentStep(0);
             break;
-          case "fetching":
-            setCurrentStep(0);
-            break;
-          case "annotating":
+          case "fetched":
             setCurrentStep(1);
             break;
-          case "analyzing":
-          case "completed":
+          case "analyzed":
             setCurrentStep(2);
             break;
           default:
