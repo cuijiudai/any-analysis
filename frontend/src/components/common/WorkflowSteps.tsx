@@ -267,7 +267,9 @@ const WorkflowSteps: React.FC<WorkflowStepsProps> = ({
               {completedSteps.includes(index) ? (
                 <CheckCircleOutlined />
               ) : (
-                step.icon
+                <span style={{ fontSize: 14, fontWeight: 600 }}>
+                  {index + 1}
+                </span>
               )}
             </div>
           ),

@@ -123,6 +123,61 @@ export class DataAnalysisController {
   }
 
   /**
+   * 查询会话数据（GET方式）
+   */
+  @Get('query/:sessionId')
+  async querySessionData(
+    @Param('sessionId') sessionId: string,
+    @Query('page') page?: number,
+    @Query('pageSize') pageSize?: number,
+    @Query('search') search?: string,
+    @Query('fields') fields?: string,
+    @Query('sortField') sortField?: string,
+    @Query('sortDirection') sortDirection?: 'ASC' | 'DESC'
+  ) {
+    const options: QueryOptions = {
+      page: page ? parseInt(String(page)) : 1,
+      pageSize: pageSize ? parseInt(String(pageSize)) : 20,
+    };
+
+    if (fields) {
+      options.fields = fields.split(',');
+    }
+
+    if (sortField) {
+      options.sorts = [{
+        field: sortField,
+        direction: sortDirection || 'ASC',
+      }];
+    }
+
+    // 处理搜索参数
+    if (search && search.trim()) {
+      // 简单的全局搜索实现，可以根据需要扩展
+      options.filters = [{
+        field: 'all', // 特殊标识，表示全局搜索
+        operator: 'like',
+        value: search.trim(),
+      }];
+    }
+
+    const result = await this.dataAnalysisService.queryData(sessionId, options);
+    
+    return {
+      success: true,
+      data: {
+        data: result.data,
+        pagination: {
+          page: result.page,
+          pageSize: result.pageSize,
+          total: result.total,
+        },
+        fields: result.fields,
+      },
+    };
+  }
+
+  /**
    * 获取会话数据（GET方式，用于简单查询）
    */
   @Get('data/:sessionId')

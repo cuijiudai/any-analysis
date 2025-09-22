@@ -11,15 +11,11 @@ import {
 } from "../entities";
 
 @Injectable()
-export class DatabaseConfig implements TypeOrmOptionsFactory {
+export class PostgresDatabaseConfig implements TypeOrmOptionsFactory {
   createTypeOrmOptions(): TypeOrmModuleOptions {
     return {
-      type: "mysql",
-      host: process.env.DB_HOST || "127.0.0.1",
-      port: parseInt(process.env.DB_PORT) || 3306,
-      username: process.env.DB_USERNAME || "root",
-      password: process.env.DB_PASSWORD || "",
-      database: process.env.DB_DATABASE || "data_fetch_analysis",
+      type: "postgres",
+      url: process.env.DATABASE_URL,
       entities: [
         DataSession,
         FetchConfig,
@@ -29,22 +25,22 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
         User,
         MarketSession,
       ],
-      synchronize: false,
+      synchronize: process.env.NODE_ENV === "development",
       logging: process.env.NODE_ENV === "development",
-      charset: "utf8mb4",
-      timezone: "+08:00",
-      // 支持大数据包
+      ssl:
+        process.env.NODE_ENV === "production"
+          ? { rejectUnauthorized: false }
+          : false,
+      // Vercel 无服务器环境优化
       extra: {
         connectionLimit: process.env.NODE_ENV === "production" ? 5 : 10,
         acquireTimeout: 60000,
         timeout: 60000,
-        // Vercel 无服务器环境优化
-        ...(process.env.NODE_ENV === "production" && {
-          ssl:
-            process.env.DB_SSL === "true"
-              ? { rejectUnauthorized: false }
-              : false,
-        }),
+        // 连接池优化
+        idleTimeoutMillis: 30000,
+        max: 5,
+        statement_timeout: 30000,
+        query_timeout: 30000,
       },
     };
   }

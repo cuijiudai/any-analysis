@@ -8,6 +8,7 @@ import {
   Divider,
   message,
   Modal,
+  Tabs,
 } from "antd";
 import {
   BarChartOutlined,
@@ -15,7 +16,7 @@ import {
   DownloadOutlined,
   SettingOutlined,
   PlusOutlined,
-  FolderOutlined,
+  DashboardOutlined,
   ClearOutlined,
   FullscreenOutlined,
   FullscreenExitOutlined,
@@ -201,98 +202,16 @@ export const DataAnalysisWrapper: React.FC<DataAnalysisWrapperProps> = ({
     // DataTable 组件会通过 useEffect 监听 filters 变化并重新加载数据
   };
 
-  return (
-    <div className="data-analysis-wrapper">
-      <Card
-        style={{
-          borderRadius: 12,
-          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
-          marginBottom: 16,
-        }}
-      >
-        <div className="analysis-header" style={{ marginBottom: 24 }}>
-          <div
-            style={{ display: "flex", alignItems: "center", marginBottom: 8 }}
-          >
-            <Badge
-              count="3"
-              style={{
-                backgroundColor: "#722ed1",
-                marginRight: 12,
-                fontSize: 12,
-                minWidth: 20,
-                height: 20,
-                lineHeight: "20px",
-              }}
-            />
-            <Title level={3} style={{ margin: 0, color: "#722ed1" }}>
-              数据分析
-            </Title>
-          </div>
-          <Text type="secondary" style={{ fontSize: 14, lineHeight: 1.6 }}>
-            浏览和分析已标注的数据，支持筛选、排序、导出等功能。
-            可以创建图表和进行统计分析。
-          </Text>
-        </div>
-
-        {/* 操作按钮 */}
-        <div className="action-buttons" style={{ marginBottom: 24 }}>
-          <Space size="middle">
-            <Button
-              type={activeTab === "table" ? "primary" : "dashed"}
-              icon={<TableOutlined />}
-              onClick={() => setActiveTab("table")}
-              style={
-                activeTab !== "table"
-                  ? { borderColor: "#722ed1", color: "#722ed1" }
-                  : {}
-              }
-            >
-              表格视图
-            </Button>
-
-            <Button
-              type={activeTab === "management" ? "primary" : "dashed"}
-              icon={<FolderOutlined />}
-              onClick={() => setActiveTab("management")}
-              style={
-                activeTab !== "management"
-                  ? { borderColor: "#722ed1", color: "#722ed1" }
-                  : {}
-              }
-            >
-              图表管理
-            </Button>
-            <Button
-              type="primary"
-              ghost
-              icon={<PlusOutlined />}
-              onClick={() => {
-                if (totalFilteredCount === 0) {
-                  message.warning("请先在表格视图中筛选数据，然后再创建图表");
-                  setActiveTab("table");
-                } else {
-                  setChartConfigVisible(true);
-                }
-              }}
-            >
-              创建图表{" "}
-              {totalFilteredCount > 0 && `(${totalFilteredCount}条数据)`}
-            </Button>
-
-            {onSettings && (
-              <Button icon={<SettingOutlined />} onClick={onSettings}>
-                分析设置
-              </Button>
-            )}
-          </Space>
-        </div>
-
-        <Divider style={{ margin: "24px 0" }} />
-      </Card>
-
-      {/* 主要内容区域 */}
-      {activeTab === "table" ? (
+  const tabItems = [
+    {
+      key: "table",
+      label: (
+        <span>
+          <TableOutlined style={{ marginRight: 6 }} />
+          表格视图
+        </span>
+      ),
+      children: (
         <>
           {/* 筛选面板 */}
           <DataFilterPanel
@@ -315,9 +234,34 @@ export const DataAnalysisWrapper: React.FC<DataAnalysisWrapperProps> = ({
             onDataChange={handleDataChange}
             onRowSelect={setSelectedRows}
             onFiltersChange={setFilters}
+            createChartButton={
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => {
+                  if (totalFilteredCount === 0) {
+                    message.warning("请先筛选数据，然后再创建图表");
+                  } else {
+                    setChartConfigVisible(true);
+                  }
+                }}
+              >
+                创建图表{totalFilteredCount > 0 && ` (${totalFilteredCount})`}
+              </Button>
+            }
           />
         </>
-      ) : (
+      ),
+    },
+    {
+      key: "management",
+      label: (
+        <span>
+          <DashboardOutlined style={{ marginRight: 6 }} />
+          图表管理
+        </span>
+      ),
+      children: (
         <ChartManagement
           sessionId={sessionId}
           onLoadChart={(chartData, config) => {
@@ -330,7 +274,24 @@ export const DataAnalysisWrapper: React.FC<DataAnalysisWrapperProps> = ({
             setChartConfigVisible(true);
           }}
         />
-      )}
+      ),
+    },
+  ];
+
+  return (
+    <div className="data-analysis-wrapper">
+      <Tabs
+        activeKey={activeTab}
+        onChange={key => setActiveTab(key as "table" | "management")}
+        items={tabItems}
+        size="large"
+        style={{
+          backgroundColor: "#fff",
+          borderRadius: 8,
+          padding: "0 16px",
+          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
+        }}
+      />
 
       {/* 图表配置模态框 */}
       <ChartConfigModal
@@ -357,29 +318,39 @@ export const DataAnalysisWrapper: React.FC<DataAnalysisWrapperProps> = ({
           setIsFullscreen(false);
         }}
         width={isFullscreen ? "100vw" : "90vw"}
-        style={isFullscreen ? { top: 0, maxWidth: "none", margin: 0, padding: 0 } : { top: 20 }}
+        style={
+          isFullscreen
+            ? { top: 0, maxWidth: "none", margin: 0, padding: 0 }
+            : { top: 20 }
+        }
         bodyStyle={isFullscreen ? { padding: 0, height: "100vh" } : {}}
         footer={null}
       >
-        <div style={{ position: 'relative' }}>
+        <div style={{ position: "relative" }}>
           <Button
             type="text"
-            icon={isFullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
+            icon={
+              isFullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />
+            }
             onClick={() => setIsFullscreen(!isFullscreen)}
             style={{
-              position: 'absolute',
+              position: "absolute",
               top: 8,
               right: 8,
               zIndex: 1000,
-              backgroundColor: 'rgba(255, 255, 255, 0.8)',
-              border: '1px solid #d9d9d9'
+              backgroundColor: "rgba(255, 255, 255, 0.8)",
+              border: "1px solid #d9d9d9",
             }}
           />
           <ChartContainer
             chartData={currentChart || undefined}
             config={currentChartConfig || undefined}
             loading={chartLoading}
-            height={isFullscreen ? window.innerHeight - 100 : Math.max(600, window.innerHeight - 200)}
+            height={
+              isFullscreen
+                ? window.innerHeight - 100
+                : Math.max(600, window.innerHeight - 200)
+            }
             showToolbar={false}
           />
         </div>

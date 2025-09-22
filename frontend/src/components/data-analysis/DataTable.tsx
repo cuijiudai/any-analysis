@@ -70,6 +70,7 @@ export interface DataTableProps {
   onRowSelect?: (selectedRows: any[]) => void;
   onDataChange?: (data: any[], total?: number) => void;
   onFiltersChange?: (filters: FilterCondition[]) => void;
+  createChartButton?: React.ReactNode;
 }
 
 export const DataTable: React.FC<DataTableProps> = ({
@@ -82,6 +83,7 @@ export const DataTable: React.FC<DataTableProps> = ({
   onRowSelect,
   onDataChange,
   onFiltersChange,
+  createChartButton,
 }) => {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<any[]>([]);
@@ -321,6 +323,7 @@ export const DataTable: React.FC<DataTableProps> = ({
             {allFilters.length > 0 && (
               <Button onClick={clearAllFilters}>清除筛选</Button>
             )}
+            {createChartButton}
             <Button
               icon={<ReloadOutlined />}
               onClick={loadData}

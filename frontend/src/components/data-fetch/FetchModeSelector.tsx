@@ -136,7 +136,7 @@ const FetchModeSelector: React.FC<FetchModeSelectorProps> = ({
           }}
         >
           <Row gutter={16}>
-            <Col span={8}>
+            <Col span={6}>
               <Form.Item
                 label={
                   <span>
@@ -160,37 +160,34 @@ const FetchModeSelector: React.FC<FetchModeSelectorProps> = ({
                 </Select>
               </Form.Item>
             </Col>
-            <Col
-              span={8}
-              style={{
-                display: paginationType === "offset" ? "block" : "none",
-              }}
-            >
-              <Form.Item
-                label={
-                  <span>
-                    步长
-                    <Tooltip title="索引方式下每次递增的数量，默认为20">
-                      <InfoCircleOutlined
-                        style={{ marginLeft: 4, color: "#999" }}
-                      />
-                    </Tooltip>
-                  </span>
-                }
-                name="stepSize"
-              >
-                <InputNumber
-                  style={{ width: "100%" }}
-                  min={1}
-                  max={1000}
-                  value={stepSize}
-                  onChange={handleStepSizeChange}
-                  disabled={disabled}
-                  placeholder="20"
-                />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
+            {paginationType === "offset" && (
+              <Col span={6}>
+                <Form.Item
+                  label={
+                    <span>
+                      步长
+                      <Tooltip title="索引方式下每次递增的数量，默认为20">
+                        <InfoCircleOutlined
+                          style={{ marginLeft: 4, color: "#999" }}
+                        />
+                      </Tooltip>
+                    </span>
+                  }
+                  name="stepSize"
+                >
+                  <InputNumber
+                    style={{ width: "100%" }}
+                    min={1}
+                    max={1000}
+                    value={stepSize || 20}
+                    onChange={handleStepSizeChange}
+                    disabled={disabled}
+                    placeholder="20"
+                  />
+                </Form.Item>
+              </Col>
+            )}
+            <Col span={paginationType === "offset" ? 6 : 9}>
               <Form.Item
                 label={
                   <span>
@@ -253,7 +250,7 @@ const FetchModeSelector: React.FC<FetchModeSelectorProps> = ({
                 </Select>
               </Form.Item>
             </Col>
-            <Col span={8}>
+            <Col span={paginationType === "offset" ? 6 : 9}>
               <Form.Item
                 label={
                   <span>

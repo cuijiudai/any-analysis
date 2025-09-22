@@ -10,7 +10,6 @@ import {
   FormInstance,
   Dropdown,
   Button,
-  Menu,
 } from "antd";
 import {
   InfoCircleOutlined,
@@ -139,31 +138,70 @@ export const FieldList: React.FC<FieldListProps> = ({
 
               <div style={{ marginLeft: 12 }}>
                 <Dropdown
-                  overlay={
-                    <Menu
-                      onClick={({ key }) => onFieldTypeChange?.(field.name, key)}
-                    >
-                      {dataTypeOptions.map(option => (
-                        <Menu.Item key={option.value}>
-                          <Tag color={option.color} style={{ margin: 0 }}>
+                  menu={{
+                    items: dataTypeOptions.map(option => ({
+                      key: option.value,
+                      label: (
+                        <div style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          padding: '4px 8px',
+                          borderRadius: '6px',
+                          transition: 'all 0.2s'
+                        }}>
+                          <span style={{ fontSize: '14px', marginRight: '8px' }}>
+                            {option.icon}
+                          </span>
+                          <span style={{ fontWeight: 500 }}>
                             {option.label}
-                          </Tag>
-                        </Menu.Item>
-                      ))}
-                    </Menu>
-                  }
+                          </span>
+                        </div>
+                      ),
+                    })),
+                    onClick: ({ key }) => onFieldTypeChange?.(field.name, key),
+                  }}
                   trigger={['click']}
+                  placement="bottomLeft"
                 >
-                  <Button size="small" style={{ minWidth: 100 }}>
-                    <Tag 
-                      color={getFieldTypeColor(field.annotation?.fieldType || field.type)} 
-                      style={{ margin: 0 }}
-                    >
-                      {FIELD_TYPE_LABELS[field.annotation?.fieldType as FieldType] || 
-                       FIELD_TYPE_LABELS[field.type as FieldType] || 
-                       field.type}
-                    </Tag>
-                    <DownOutlined style={{ marginLeft: 4 }} />
+                  <Button 
+                    size="small" 
+                    style={{ 
+                      minWidth: 120,
+                      height: 32,
+                      border: '1px solid #d9d9d9',
+                      borderRadius: '6px',
+                      background: '#fff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '0 8px',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = '#40a9ff';
+                      e.currentTarget.style.boxShadow = '0 2px 4px rgba(64,169,255,0.2)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = '#d9d9d9';
+                      e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.04)';
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                      <span style={{ fontSize: '12px', marginRight: '6px' }}>
+                        {getFieldTypeIcon(field.annotation?.fieldType || field.type)}
+                      </span>
+                      <span style={{ 
+                        fontSize: '13px', 
+                        fontWeight: 500,
+                        color: getFieldTypeColor(field.annotation?.fieldType || field.type) === 'default' ? '#666' : undefined
+                      }}>
+                        {FIELD_TYPE_LABELS[field.annotation?.fieldType as FieldType] || 
+                         FIELD_TYPE_LABELS[field.type as FieldType] || 
+                         field.type}
+                      </span>
+                    </div>
+                    <DownOutlined style={{ fontSize: '10px', color: '#999' }} />
                   </Button>
                 </Dropdown>
               </div>

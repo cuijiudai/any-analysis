@@ -144,7 +144,18 @@ export class DataAnalysisService {
 
     // 应用筛选条件
     if (options.filters && options.filters.length > 0) {
-      this.applyFilters(queryBuilder, options.filters, fieldDefinitions);
+      // 处理全局搜索
+      const globalSearchFilter = options.filters.find(f => f.field === 'all');
+      if (globalSearchFilter) {
+        this.applyGlobalSearch(queryBuilder, globalSearchFilter.value, fieldDefinitions);
+        // 移除全局搜索过滤器，应用其他过滤器
+        const otherFilters = options.filters.filter(f => f.field !== 'all');
+        if (otherFilters.length > 0) {
+          this.applyFilters(queryBuilder, otherFilters, fieldDefinitions);
+        }
+      } else {
+        this.applyFilters(queryBuilder, options.filters, fieldDefinitions);
+      }
     }
 
     // 应用排序
@@ -416,6 +427,31 @@ export class DataAnalysisService {
         dataTypes: {},
         sampleData: [],
       };
+    }
+  }
+
+  /**
+   * 应用全局搜索
+   */
+  private applyGlobalSearch(
+    queryBuilder: SelectQueryBuilder<any>,
+    searchValue: string,
+    fieldDefinitions: Record<string, any>
+  ): void {
+    const searchableFields = Object.keys(fieldDefinitions).filter(field => {
+      const fieldType = fieldDefinitions[field]?.type;
+      // 只在文本类型字段中搜索
+      return ['string', 'text'].includes(fieldType);
+    });
+
+    if (searchableFields.length > 0) {
+      const searchConditions = searchableFields.map(field => 
+        `data.${field} LIKE :globalSearch`
+      ).join(' OR ');
+      
+      queryBuilder.andWhere(`(${searchConditions})`, {
+        globalSearch: `%${searchValue}%`
+      });
     }
   }
 

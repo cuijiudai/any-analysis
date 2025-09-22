@@ -93,7 +93,7 @@ const FetchedDataPreview: React.FC<FetchedDataPreviewProps> = ({
     if (!sessionId) return;
 
     try {
-      const response = await api.get(`/data-fetch/stats/${sessionId}`);
+      const response = await api.get(`/data-analysis/stats/${sessionId}`);
       if (response.data.success) {
         setDataStats(response.data.data);
       }
@@ -129,7 +129,7 @@ const FetchedDataPreview: React.FC<FetchedDataPreviewProps> = ({
           params.filters = JSON.stringify(columnFilters);
         }
 
-        const response = await api.get(`/data-fetch/data/${sessionId}`, {
+        const response = await api.get(`/data-analysis/query/${sessionId}`, {
           params,
         });
 
@@ -189,6 +189,29 @@ const FetchedDataPreview: React.FC<FetchedDataPreviewProps> = ({
           if (typeof value === "boolean") {
             return (
               <Tag color={value ? "green" : "red"}>{value ? "是" : "否"}</Tag>
+            );
+          }
+
+          // 检查是否为数字类型
+          if (
+            typeof value === "number" ||
+            (!isNaN(Number(value)) &&
+              !isNaN(parseFloat(String(value))) &&
+              isFinite(Number(value)) &&
+              String(value).trim() !== "")
+          ) {
+            const numValue = typeof value === "number" ? value : Number(value);
+            return (
+              <span
+                style={{
+                  cursor: "pointer",
+                  textAlign: "right",
+                  display: "block",
+                }}
+                onClick={() => showRecordDetail(record)}
+              >
+                {numValue.toLocaleString()}
+              </span>
             );
           }
 
@@ -333,30 +356,55 @@ const FetchedDataPreview: React.FC<FetchedDataPreviewProps> = ({
     try {
       message.loading("正在导出数据...", 0);
 
-      const response = await api.get(`/data-fetch/export/${sessionId}`, {
+      // 获取所有数据
+      const response = await api.get(`/data-analysis/query/${sessionId}`, {
         params: {
-          format: "csv",
-          filters: filters.length > 0 ? JSON.stringify(filters) : undefined,
+          page: 1,
+          pageSize: 10000, // 导出大量数据
+          search: searchText || undefined,
         },
-        responseType: "blob",
       });
 
-      const blob = new Blob([response.data], { type: "text/csv" });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `data_${sessionId}_${
-        new Date().toISOString().split("T")[0]
-      }.csv`;
-      link.click();
-      window.URL.revokeObjectURL(url);
+      if (response.data.success && response.data.data.data.length > 0) {
+        const csvData = convertToCSV(response.data.data.data);
+        const blob = new Blob([csvData], { type: "text/csv;charset=utf-8;" });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `data_${sessionId}_${
+          new Date().toISOString().split("T")[0]
+        }.csv`;
+        link.click();
+        window.URL.revokeObjectURL(url);
+        message.success("数据导出成功");
+      } else {
+        message.error("没有数据可导出");
+      }
 
       message.destroy();
-      message.success("数据导出成功");
     } catch (error) {
       message.destroy();
       message.error("数据导出失败");
     }
+  };
+
+  // 转换为CSV格式
+  const convertToCSV = (data: any[]) => {
+    if (data.length === 0) return '';
+    
+    const headers = Object.keys(data[0]).filter(key => !['id', 'created_at', 'updated_at'].includes(key));
+    const csvHeaders = headers.join(',');
+    
+    const csvRows = data.map(row => 
+      headers.map(header => {
+        const value = row[header];
+        if (value === null || value === undefined) return '';
+        if (typeof value === 'object') return `"${JSON.stringify(value).replace(/"/g, '""')}"`;
+        return `"${String(value).replace(/"/g, '""')}"`;
+      }).join(',')
+    );
+    
+    return [csvHeaders, ...csvRows].join('\n');
   };
 
   // 表格大小菜单
@@ -426,6 +474,7 @@ const FetchedDataPreview: React.FC<FetchedDataPreviewProps> = ({
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
+              paddingTop: "6px",
             }}
           >
             <Title level={5} style={{ margin: 0 }}>
@@ -490,20 +539,22 @@ const FetchedDataPreview: React.FC<FetchedDataPreviewProps> = ({
           />
         )}
 
-        <Spin spinning={loading}>
-          <Table
-            columns={columns}
-            dataSource={data}
-            pagination={false}
-            scroll={{ x: true, y: height }}
-            size={tableSize}
-            rowKey="id"
-            rowSelection={rowSelection}
-            locale={{
-              emptyText: loading ? "加载中..." : "暂无数据",
-            }}
-          />
-        </Spin>
+        <div>
+          <Spin spinning={loading}>
+            <Table
+              columns={columns}
+              dataSource={data}
+              pagination={false}
+              scroll={{ x: true }}
+              size={tableSize}
+              rowKey="id"
+              rowSelection={rowSelection}
+              locale={{
+                emptyText: loading ? "加载中..." : "暂无数据",
+              }}
+            />
+          </Spin>
+        </div>
 
         {pagination.total > 0 && (
           <div style={{ marginTop: 16, textAlign: "right" }}>
