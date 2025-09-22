@@ -8,6 +8,7 @@ const api = axios.create({
         }/api`
       : "/api", // 在开发环境中使用代理
   timeout: 30000,
+  withCredentials: true, // 允许跨域发送cookies
   headers: {
     "Content-Type": "application/json",
   },
