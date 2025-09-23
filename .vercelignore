@@ -1,0 +1,17 @@
+backend/
+node_modules/
+.git/
+.env*
+*.log
+.DS_Store
+.vscode/
+.kiro/
+README.md
+VERCEL_DEPLOYMENT.md
+VERCEL_NEON_DEPLOYMENT.md
+VERCEL_FRONTEND_DEPLOYMENT.md
+env.example
+deploy.sh
+deploy-vercel-neon.sh
+START_GUIDE.md
+setup.sh 
