@@ -20,10 +20,10 @@ export class MarketSession {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'user_id', type: 'varchar', length: 36 })
+  @Column({ name: 'user_id', type: 'uuid' })
   userId: string;
 
-  @Column({ name: 'session_id', type: 'varchar', length: 36 })
+  @Column({ name: 'session_id', type: 'uuid' })
   sessionId: string;
 
   @Column({ type: 'varchar', length: 200 })

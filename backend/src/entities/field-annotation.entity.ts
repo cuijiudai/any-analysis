@@ -16,7 +16,7 @@ export class FieldAnnotation {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'session_id', type: 'varchar', length: 36 })
+  @Column({ name: 'session_id', type: 'uuid' })
   sessionId: string;
 
   @Column({ name: 'field_name', type: 'varchar', length: 255 })

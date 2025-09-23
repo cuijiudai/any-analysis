@@ -7,6 +7,8 @@ import {
   DataTableSchema,
   FieldAnnotation,
   ChartConfig,
+  User,
+  MarketSession,
 } from '../src/entities';
 
 class DatabaseManager {
@@ -17,9 +19,8 @@ class DatabaseManager {
     const options = config.createTypeOrmOptions();
     
     this.dataSource = new DataSource({
-      type: 'mysql',
       ...options,
-      entities: [DataSession, FetchConfig, DataTableSchema, FieldAnnotation, ChartConfig],
+      entities: [DataSession, FetchConfig, DataTableSchema, FieldAnnotation, ChartConfig, User, MarketSession],
       migrations: ['src/migrations/*.ts'],
       migrationsRun: false,
     } as any);
@@ -37,7 +38,15 @@ class DatabaseManager {
 
   async createDatabase() {
     try {
-      // 创建一个不指定数据库的连接来创建数据库
+      const dbType = process.env.DB_TYPE || 'postgres';
+      
+      if (dbType === 'postgres') {
+        // PostgreSQL 数据库通常由云服务提供商管理，不需要手动创建
+        console.log('PostgreSQL 数据库由云服务提供商管理，跳过数据库创建');
+        return;
+      }
+      
+      // MySQL 创建数据库逻辑（保留以备后用）
       const tempDataSource = new DataSource({
         type: 'mysql',
         host: process.env.DB_HOST || '127.0.0.1',

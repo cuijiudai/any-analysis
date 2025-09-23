@@ -23,7 +23,10 @@
     "db:revert": "ts-node -r tsconfig-paths/register scripts/database-manager.ts revert",
     "db:seed": "ts-node -r tsconfig-paths/register scripts/database-manager.ts seed",
     "db:reset": "ts-node -r tsconfig-paths/register scripts/database-manager.ts reset",
-    "db:drop": "ts-node -r tsconfig-paths/register scripts/database-manager.ts drop"
+    "db:drop": "ts-node -r tsconfig-paths/register scripts/database-manager.ts drop",
+    "db:setup-local": "./scripts/setup-local-db.sh",
+    "db:migrate-from-mysql": "cp .env.migration .env && ts-node -r tsconfig-paths/register scripts/migrate-mysql-to-postgres.ts",
+    "dev:local": "node scripts/start-local.js"
   },
   "dependencies": {
     "@nestjs/axios": "^3.0.1",

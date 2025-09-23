@@ -26,7 +26,7 @@ export class DataSession {
   @PrimaryGeneratedColumn("uuid")
   id: string;
 
-  @Column({ name: "user_id", type: "varchar", length: 36, nullable: true })
+  @Column({ name: "user_id", type: "uuid", nullable: true })
   userId?: string;
 
   @Column({ type: "varchar", length: 255 })

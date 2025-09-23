@@ -25,7 +25,7 @@ export class FetchConfig {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'session_id', type: 'varchar', length: 36 })
+  @Column({ name: 'session_id', type: 'uuid' })
   sessionId: string;
 
   @Column({ name: 'api_url', type: 'text' })
